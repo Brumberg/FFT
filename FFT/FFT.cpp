@@ -5,6 +5,7 @@
 #include <math.h>
 #include <assert.h>
 #include <iostream>
+#include "plot.h"
 
 typedef enum EN_ScalingMethod{SCALE_INPUT, SCALE_OUTPUT, SCALEINPOUT}EN_ScalingMethod;
 
@@ -267,6 +268,10 @@ TW CFFT<loglen, TW, T, TFFT>::GetSinFactor(size_t stage, size_t stageshift)
 template <size_t loglen, typename TW, typename T, typename TFFT>
 void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[])
 {
+	static const size_t bitcorrection = sizeof(reinterpret_cast<TFFT*>(0)->re) * 8 - 1;
+	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
+	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
+
 	size_t ldlen	= loglen;
 	size_t length	= 1<<loglen;
 	ReorderSamples(buffer, ffttransform);
@@ -276,21 +281,22 @@ void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[])
 		size_t stagesize	= static_cast<size_t>(1)<<(i+1);
 		size_t stagesize2	= static_cast<size_t>(1)<<i;
 		size_t looplength	= length>>(i+1);
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-			for(size_t R=0;R<stagesize2;R++)
+			TFFT weight;
+			weight.re = GetCosFactor(R, (i + 1));
+			weight.im = -GetSinFactor(R, (i + 1));//-sin(PI2*RT_ratio);
+
+			//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
+			weight.re <<= wscaling_real;
+			weight.im <<= wscaling_imag;
+			
+
+			for (size_t L = 0; L < looplength; L++)
 			{
+				size_t butterflyix = L << (i + 1);
 				TFFT temp_a	=	ffttransform[butterflyix+R];
 				TFFT temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
-				TFFT weight;
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	-GetSinFactor(R,(i+1));//-sin(PI2*RT_ratio);
-				
-				//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
-				weight.re	<<= (sizeof(reinterpret_cast<TFFT*>(0)->re)-sizeof(TW))*8;
-				weight.im	<<= (sizeof(reinterpret_cast<TFFT*>(0)->im)-sizeof(TW))*8;
-				static const size_t bitcorrection		= sizeof(reinterpret_cast<TFFT*>(0)->re)*8-1;
 #ifdef _C1x_
 				auto dummy = weight*temp_b;
 				ffttransform[butterflyix+R]				= static_cast<TFFT>((temp_a<<bitcorrection)+dummy);
@@ -308,6 +314,9 @@ void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[])
 template <size_t loglen, typename TW, typename T, typename TFFT>
 void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[])
 {
+	static const size_t bitcorrection = sizeof(reinterpret_cast<TFFT*>(0)->re) * 8 - 1;
+	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
+	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
 	size_t ldlen	= loglen;
 	size_t length	= 1<<loglen;
 	ReorderSamples(buffer,ffttransform);
@@ -317,21 +326,21 @@ void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[]
 		size_t stagesize	= static_cast<size_t>(1)<<(i+1);
 		size_t stagesize2	= static_cast<size_t>(1)<<i;
 		size_t looplength	= length>>(i+1);
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-			for(size_t R=0;R<stagesize2;R++)
+			TFFT weight;
+			weight.re = GetCosFactor(R, (i + 1));
+			weight.im = GetSinFactor(R, (i + 1));//-sin(PI2*RT_ratio);
+
+			//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
+			weight.re <<= wscaling_real;
+			weight.im <<= wscaling_imag;
+
+			for (size_t L = 0; L < looplength; L++)
 			{
+				size_t butterflyix = L << (i + 1);
 				TFFT temp_a	=	ffttransform[butterflyix+R];
-				TFFT temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
-				TFFT weight;
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	GetSinFactor(R,(i+1));//-sin(PI2*RT_ratio);
-				
-				//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
-				weight.re	<<= (sizeof(reinterpret_cast<TFFT*>(0)->re)-sizeof(TW))*8;
-				weight.im	<<= (sizeof(reinterpret_cast<TFFT*>(0)->im)-sizeof(TW))*8;
-				static const size_t bitcorrection		= sizeof(reinterpret_cast<TFFT*>(0)->re)*8-1;
+				TFFT temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages	
 #ifdef _C1x_
 				auto dummy = weight*temp_b;
 				ffttransform[butterflyix+R]				= static_cast<TFFT>((temp_a<<bitcorrection)+dummy);
@@ -349,6 +358,10 @@ void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[]
 template <size_t loglen, typename TW, typename T, typename TFFT>
 void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[], EN_ScalingMethod rescale, size_t *pBlockExponent)
 {
+	static const size_t bitcorrection = sizeof(reinterpret_cast<TFFT*>(0)->re) * 8 - 1;
+	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
+	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
+
 	size_t ldlen	= loglen;
 	size_t length	= 1<<loglen;
 	size_t Exponent	= 0;
@@ -389,25 +402,25 @@ void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[], EN
 		size_t stagesize	= 1<<(i+1);
 		size_t stagesize2	= 1<<i;
 		size_t looplength	= length>>(i+1);
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-			for(size_t R=0;R<stagesize2;R++)
+			TFFT weight;
+			weight.re = GetCosFactor(R, (i + 1));
+			weight.im = -GetSinFactor(R, (i + 1));//-sin(PI2*RT_ratio);
+
+			//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
+			weight.re <<= wscaling_real;
+			weight.im <<= wscaling_imag;
+
+			for (size_t L = 0; L < looplength; L++)
 			{
+				size_t butterflyix = L << (i + 1);
 				TFFT temp_a	=	ffttransform[butterflyix+R];
 				TFFT temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
 				temp_a.re	<<= Exponent;
 				temp_a.im	<<= Exponent;
 				temp_b.re	<<= Exponent;
 				temp_b.im	<<= Exponent;
-				TFFT weight;
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	-GetSinFactor(R,(i+1));//-sin(PI2*RT_ratio);
-				
-				//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
-				weight.re	<<= (sizeof(reinterpret_cast<TFFT*>(0)->re)-sizeof(TW))*8;
-				weight.im	<<= (sizeof(reinterpret_cast<TFFT*>(0)->im)-sizeof(TW))*8;
-				static const size_t bitcorrection		= sizeof(reinterpret_cast<TFFT*>(0)->re)*8-1;
 #ifdef _C1x_
 				auto dummy = weight*temp_b;
 				ffttransform[butterflyix+R]				= static_cast<TFFT>((temp_a<<bitcorrection)+dummy);
@@ -436,6 +449,10 @@ void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[], EN
 template <size_t loglen, typename TW, typename T, typename TFFT>
 void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[], EN_ScalingMethod rescale, size_t *pBlockExponent)
 {
+	static const size_t bitcorrection = sizeof(reinterpret_cast<TFFT*>(0)->re) * 8 - 1;
+	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
+	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
+
 	size_t ldlen	= loglen;
 	size_t length	= 1<<loglen;
 	size_t Exponent	= 0;
@@ -480,25 +497,26 @@ void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[]
 		size_t stagesize	= 1<<(i+1);
 		size_t stagesize2	= 1<<i;
 		size_t looplength	= length>>(i+1);
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-			for(size_t R=0;R<stagesize2;R++)
+			TFFT weight;
+			weight.re = GetCosFactor(R, (i + 1));
+			weight.im = -GetSinFactor(R, (i + 1));//-sin(PI2*RT_ratio);
+
+			//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
+			weight.re <<= wscaling_real;
+			weight.im <<= wscaling_imag;
+
+			for (size_t L = 0; L < looplength; L++)
 			{
+				size_t butterflyix = L << (i + 1);
 				TFFT temp_a	=	ffttransform[butterflyix+R];
 				TFFT temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
 				temp_a.re	<<= Exponent;
 				temp_a.im	<<= Exponent;
 				temp_b.re	<<= Exponent;
 				temp_b.im	<<= Exponent;
-				TFFT weight;
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	-GetSinFactor(R,(i+1));//-sin(PI2*RT_ratio);
 				
-				//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
-				weight.re	<<= (sizeof(reinterpret_cast<TFFT*>(0)->re)-sizeof(TW))*8;
-				weight.im	<<= (sizeof(reinterpret_cast<TFFT*>(0)->im)-sizeof(TW))*8;
-				static const size_t bitcorrection		= sizeof(reinterpret_cast<TFFT*>(0)->re)*8-1;
 #ifdef _C1x_
 				auto dummy = weight*temp_b;
 				ffttransform[butterflyix+R]				= static_cast<TFFT>((temp_a<<bitcorrection)+dummy);
@@ -527,6 +545,10 @@ void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[]
 template <size_t loglen, typename TW, typename T, typename TFFT>
 void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[])
 {
+	static const size_t bitcorrection = sizeof(reinterpret_cast<TFFT*>(0)->re) * 8 - 1;
+	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
+	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
+
 	size_t ldlen	= loglen-1;
 	size_t length	= 1<<(loglen-1);
 	ReorderRealSamples(buffer, ffttransform);
@@ -536,21 +558,21 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[]
 		size_t stagesize	= 1<<(i+1);
 		size_t stagesize2	= 1<<i;
 		size_t looplength	= length>>(i+1);
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-			for(size_t R=0;R<stagesize2;R++)
+			TFFT weight;
+			weight.re = GetCosFactor(R, (i + 1));
+			weight.im = -GetSinFactor(R, (i + 1));//-sin(PI2*RT_ratio);
+
+			//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
+			weight.re <<= wscaling_real;
+			weight.im <<= wscaling_imag;
+
+			for (size_t L = 0; L < looplength; L++)
 			{
+				size_t butterflyix = L << (i + 1);
 				TFFT temp_a	=	ffttransform[butterflyix+R];
 				TFFT temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
-				TFFT weight;
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	-GetSinFactor(R,(i+1));//-sin(PI2*RT_ratio);
-				
-				//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
-				weight.re	<<= (sizeof(reinterpret_cast<TFFT*>(0)->re)-sizeof(TW))*8;
-				weight.im	<<= (sizeof(reinterpret_cast<TFFT*>(0)->im)-sizeof(TW))*8;
-				static const size_t bitcorrection		= sizeof(reinterpret_cast<TFFT*>(0)->re)*8-1;
 #ifdef _C1x_
 				auto dummy = weight*temp_b;
 				ffttransform[butterflyix+R]				= static_cast<TFFT>((temp_a<<bitcorrection)+dummy);
@@ -569,6 +591,10 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[]
 template <size_t loglen, typename TW, typename T, typename TFFT>
 void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransform[])
 {
+	static const size_t bitcorrection = sizeof(reinterpret_cast<TFFT*>(0)->re) * 8 - 1;
+	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
+	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
+
 	size_t ldlen	= loglen-1;
 	size_t length	= 1<<(loglen-1);
 	
@@ -583,21 +609,21 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 		size_t stagesize	= 1<<(i+1);
 		size_t stagesize2	= 1<<i;
 		size_t looplength	= length>>(i+1);
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-			for(size_t R=0;R<stagesize2;R++)
+			TFFT weight;
+			weight.re = GetCosFactor(R, (i + 1));
+			weight.im = GetSinFactor(R, (i + 1));//-sin(PI2*RT_ratio);
+
+			//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
+			weight.re <<= wscaling_real;
+			weight.im <<= wscaling_imag;
+
+			for (size_t L = 0; L < looplength; L++)
 			{
+				size_t butterflyix = L << (i + 1);
 				TFFT temp_a	=	ffttransform[butterflyix+R];
 				TFFT temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
-				TFFT weight;
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	GetSinFactor(R,(i+1));//-sin(PI2*RT_ratio);
-				
-				//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
-				weight.re	<<= (sizeof(reinterpret_cast<TFFT*>(0)->re)-sizeof(TW))*8;
-				weight.im	<<= (sizeof(reinterpret_cast<TFFT*>(0)->im)-sizeof(TW))*8;
-				static const size_t bitcorrection		= sizeof(reinterpret_cast<TFFT*>(0)->re)*8-1;
 #ifdef _C1x_
 				auto dummy = weight*temp_b;
 				ffttransform[butterflyix+R]				= static_cast<TFFT>((temp_a<<bitcorrection)+dummy);
@@ -615,6 +641,10 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 template <size_t loglen, typename TW, typename T, typename TFFT>
 void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[], EN_ScalingMethod rescale, size_t *pBlockExponent)
 {
+	static const size_t bitcorrection = sizeof(reinterpret_cast<TFFT*>(0)->re) * 8 - 1;
+	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
+	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
+
 	size_t ldlen	= loglen-1;
 	size_t length	= 1<<(loglen-1);
 	size_t Exponent	= 0;
@@ -655,25 +685,26 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[]
 		//size_t stagesize	= static_cast<size_t>(1)<<(i+1);
 		size_t stagesize2	= static_cast<size_t>(1)<<i;
 		size_t looplength	= length>>(i+1);
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-			for(size_t R=0;R<stagesize2;R++)
+			TFFT weight;
+			weight.re = GetCosFactor(R, (i + 1));
+			weight.im = -GetSinFactor(R, (i + 1));//-sin(PI2*RT_ratio);
+
+			//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
+			weight.re <<= wscaling_real;
+			weight.im <<= wscaling_imag;
+
+			for (size_t L = 0; L < looplength; L++)
 			{
+				size_t butterflyix = L << (i + 1);
 				TFFT temp_a	=	ffttransform[butterflyix+R];
 				TFFT temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
 				temp_a.re	<<= Exponent;
 				temp_a.im	<<= Exponent;
 				temp_b.re	<<= Exponent;
 				temp_b.im	<<= Exponent;
-				TFFT weight;
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	-GetSinFactor(R,(i+1));//-sin(PI2*RT_ratio);
 				
-				//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
-				weight.re	<<= (sizeof(reinterpret_cast<TFFT*>(0)->re)-sizeof(TW))*8;
-				weight.im	<<= (sizeof(reinterpret_cast<TFFT*>(0)->im)-sizeof(TW))*8;
-				static const size_t bitcorrection		= sizeof(reinterpret_cast<TFFT*>(0)->re)*8-1;
 #ifdef _C1x_
 				auto dummy = weight*temp_b;
 				ffttransform[butterflyix+R]				= static_cast<TFFT>((temp_a<<bitcorrection)+dummy);
@@ -705,6 +736,10 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[]
 template <size_t loglen, typename TW, typename T, typename TFFT>
 void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransform[], EN_ScalingMethod rescale, size_t *pBlockExponent)
 {
+	static const size_t bitcorrection = sizeof(reinterpret_cast<TFFT*>(0)->re) * 8 - 1;
+	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
+	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
+
 	size_t ldlen	= loglen-1;
 	size_t length	= 1<<(loglen-1);
 	size_t Exponent	= 0;
@@ -790,25 +825,26 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 		//size_t stagesize	= static_cast<size_t>(1)<<(i+1);
 		size_t stagesize2	= static_cast<size_t>(1)<<i;
 		size_t looplength	= length>>(i+1);
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-			for(size_t R=0;R<stagesize2;R++)
+			TFFT weight;
+			weight.re = GetCosFactor(R, (i + 1));
+			weight.im = GetSinFactor(R, (i + 1));//-sin(PI2*RT_ratio);
+
+			//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
+			weight.re <<= wscaling_real;
+			weight.im <<= wscaling_imag;
+
+			for (size_t L = 0; L < looplength; L++)
 			{
+				size_t butterflyix = L << (i + 1);
 				TFFT temp_a	=	ffttransform[butterflyix+R];
 				TFFT temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
 				temp_a.re	<<= Exponent;
 				temp_a.im	<<= Exponent;
 				temp_b.re	<<= Exponent;
 				temp_b.im	<<= Exponent;
-				TFFT weight;
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	GetSinFactor(R,(i+1));//-sin(PI2*RT_ratio);
 				
-				//optimized by the compiler if sizeof(TW)==sizeof(TFFT::ELEMENT)
-				weight.re	<<= (sizeof(reinterpret_cast<TFFT*>(0)->re)-sizeof(TW))*8;
-				weight.im	<<= (sizeof(reinterpret_cast<TFFT*>(0)->im)-sizeof(TW))*8;
-				static const size_t bitcorrection		= sizeof(reinterpret_cast<TFFT*>(0)->re)*8-1;
 #ifdef _C1x_
 				auto dummy = weight*temp_b;
 				ffttransform[butterflyix+R]				= static_cast<TFFT>((temp_a<<bitcorrection)+dummy);
@@ -1310,41 +1346,37 @@ void CFFT<loglen, float, float, FComplex>::CalculateFFT(float buffer[], FComplex
 			const float sin_delta	= sin(delta_2);
 			const float alpha		= 2.0f*sin_delta*sin_delta;
 			const float beta		= sin(delta);
+			float cos_rec			= 1.0f;
+			float sin_rec			= 0.0f;
 #endif
 #endif
 
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-
-#ifndef _USETWIDDLE_
-#ifdef _RECURRENCE_
-			float cos_rec					= 1.0f;
-			float sin_rec					= 0.0f; 
-#endif
-#endif
-			for(size_t R=0;R<stagesize2;R++)
-			{
-				FComplex temp_a	=	ffttransform[butterflyix+R];
-				FComplex temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
-				FComplex weight;
+			FComplex weight;
 #ifdef _USETWIDDLE_
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	-GetSinFactor(R,(i+1));
+			weight.re = GetCosFactor(R, (i + 1));
+			weight.im = -GetSinFactor(R, (i + 1));
 #else
 #ifndef _RECURRENCE_
-				const  float RT_Ratio = static_cast<float>(R)/stagesize;
-				weight.re	=	cos(PI2*RT_Ratio);
-				weight.im	=	-sin(PI2*RT_Ratio);
+			const  float RT_Ratio = static_cast<float>(R) / stagesize;
+			weight.re = cos(PI2 * RT_Ratio);
+			weight.im = -sin(PI2 * RT_Ratio);
 #else
-				float sin_old = sin_rec;
-				float cos_old = cos_rec;
-				cos_rec		  = cos_old-(alpha*cos_old+beta*sin_old);
-				sin_rec		  = sin_old-(alpha*sin_old-beta*cos_old);
-				weight.re	  = cos_old;
-				weight.im	  = -sin_old;
+			float sin_old = sin_rec;
+			float cos_old = cos_rec;
+			cos_rec = cos_old - (alpha * cos_old + beta * sin_old);
+			sin_rec = sin_old - (alpha * sin_old - beta * cos_old);
+			weight.re = cos_old;
+			weight.im = -sin_old;
 #endif
 #endif
+
+			for (size_t L = 0; L < looplength; L++)
+			{
+				size_t butterflyix = L << (i + 1);
+				FComplex temp_a	=	ffttransform[butterflyix+R];
+				FComplex temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
 #ifdef _C1x_
 				auto dummy								= weight*temp_b;
 				ffttransform[butterflyix+R]				= temp_a+dummy;
@@ -1380,41 +1412,37 @@ void CFFT<loglen, float, float, FComplex>::CalculateIFFT(FComplex buffer[], FCom
 			const float sin_delta	= sin(delta_2);
 			const float alpha		= 2.0f*sin_delta*sin_delta;
 			const float beta		= sin(delta);
+			float cos_rec = 1.0f;
+			float sin_rec = 0.0f;
 #endif
 #endif
 
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-
-#ifndef _USETWIDDLE_
-#ifdef _RECURRENCE_
-			float cos_rec					= 1.0f;
-			float sin_rec					= 0.0f; 
-#endif
-#endif
-			for(size_t R=0;R<stagesize2;R++)
-			{
-				FComplex temp_a	=	ffttransform[butterflyix+R];
-				FComplex temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
-				FComplex weight;
+			FComplex weight;
 #ifdef _USETWIDDLE_
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	GetSinFactor(R,(i+1));
+			weight.re = GetCosFactor(R, (i + 1));
+			weight.im = GetSinFactor(R, (i + 1));
 #else
 #ifndef _RECURRENCE_
-				const  float RT_Ratio = static_cast<float>(R)/stagesize;
-				weight.re	=	cos(PI2*RT_Ratio);
-				weight.im	=	sin(PI2*RT_Ratio);
+			const  float RT_Ratio = static_cast<float>(R) / stagesize;
+			weight.re = cos(PI2 * RT_Ratio);
+			weight.im = sin(PI2 * RT_Ratio);
 #else
-				float sin_old = sin_rec;
-				float cos_old = cos_rec;
-				cos_rec		  = cos_old-(alpha*cos_old+beta*sin_old);
-				sin_rec		  = sin_old-(alpha*sin_old-beta*cos_old);
-				weight.re	  = cos_old;
-				weight.im	  = sin_old;
+			float sin_old = sin_rec;
+			float cos_old = cos_rec;
+			cos_rec = cos_old - (alpha * cos_old + beta * sin_old);
+			sin_rec = sin_old - (alpha * sin_old - beta * cos_old);
+			weight.re = cos_old;
+			weight.im = sin_old;
 #endif
 #endif
+			for (size_t L = 0; L < looplength; L++)
+			{
+				size_t butterflyix = L << (i + 1);
+				FComplex temp_a	=	ffttransform[butterflyix+R];
+				FComplex temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
+				
 #ifdef _C1x_
 				auto dummy								= weight*temp_b;
 				ffttransform[butterflyix+R]				= temp_a+dummy;
@@ -1450,23 +1478,24 @@ void CFFT<loglen, float, float, FComplex>::CalculateRealFFT(float buffer[], FCom
 #endif
 		size_t stagesize2	= static_cast<size_t>(1)<<i;
 		size_t looplength	= length>>(i+1);
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-			for(size_t R=0;R<stagesize2;R++)
+			FComplex weight;
+#ifdef _USETWIDDLE_
+			weight.re = GetCosFactor(R, (i + 1));
+			weight.im = -GetSinFactor(R, (i + 1));
+#else
+			static const float PI2 = 6.2831853071795864769252868f;
+			const  float RT_Ratio = static_cast<float>(R) / stagesize;
+			weight.re = cos(PI2 * RT_Ratio);
+			weight.im = -sin(PI2 * RT_Ratio);
+#endif
+			for (size_t L = 0; L < looplength; L++)
 			{
+				size_t butterflyix = L << (i + 1);
 				FComplex temp_a	=	ffttransform[butterflyix+R];
 				FComplex temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
-				FComplex weight;
-#ifdef _USETWIDDLE_
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	-GetSinFactor(R,(i+1));
-#else
-				static const float PI2 = 6.2831853071795864769252868f;
-				const  float RT_Ratio = static_cast<float>(R)/stagesize;
-				weight.re	=	cos(PI2*RT_Ratio);
-				weight.im	=	-sin(PI2*RT_Ratio);
-#endif
+				
 #ifdef _C1x_
 				auto dummy								= weight*temp_b;
 				ffttransform[butterflyix+R]				= temp_a+dummy;
@@ -1505,41 +1534,37 @@ void CFFT<loglen, float, float, FComplex>::CalculateRealIFFT(FComplex buffer[], 
 			const float sin_delta	= sin(delta_2);
 			const float alpha		= 2.0f*sin_delta*sin_delta;
 			const float beta		= sin(delta);
+			float cos_rec = 1.0f;
+			float sin_rec = 0.0f;
 #endif
 #endif
 
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-
-#ifndef _USETWIDDLE_
-#ifdef _RECURRENCE_
-			float cos_rec					= 1.0f;
-			float sin_rec					= 0.0f; 
-#endif
-#endif
-			for(size_t R=0;R<stagesize2;R++)
-			{
-				FComplex temp_a	=	ffttransform[butterflyix+R];
-				FComplex temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
-				FComplex weight;
+			FComplex weight;
 #ifdef _USETWIDDLE_
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	GetSinFactor(R,(i+1));
+			weight.re = GetCosFactor(R, (i + 1));
+			weight.im = GetSinFactor(R, (i + 1));
 #else
 #ifndef _RECURRENCE_
-				const  float RT_Ratio = static_cast<float>(R)/stagesize;
-				weight.re	=	cos(PI2*RT_Ratio);
-				weight.im	=	sin(PI2*RT_Ratio);
+			const  float RT_Ratio = static_cast<float>(R) / stagesize;
+			weight.re = cos(PI2 * RT_Ratio);
+			weight.im = sin(PI2 * RT_Ratio);
 #else
-				float sin_old = sin_rec;
-				float cos_old = cos_rec;
-				cos_rec		  = cos_old-(alpha*cos_old+beta*sin_old);
-				sin_rec		  = sin_old-(alpha*sin_old-beta*cos_old);
-				weight.re	  = cos_old;
-				weight.im	  = sin_old;
+			float sin_old = sin_rec;
+			float cos_old = cos_rec;
+			cos_rec = cos_old - (alpha * cos_old + beta * sin_old);
+			sin_rec = sin_old - (alpha * sin_old - beta * cos_old);
+			weight.re = cos_old;
+			weight.im = sin_old;
 #endif
 #endif
+			for (size_t L = 0; L < looplength; L++)
+			{
+				size_t butterflyix = L << (i + 1);
+				FComplex temp_a	=	ffttransform[butterflyix+R];
+				FComplex temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
+
 #ifdef _C1x_
 				auto dummy								= weight*temp_b;
 				ffttransform[butterflyix+R]				= temp_a+dummy;
@@ -1916,39 +1941,36 @@ void CFFT<loglen, double, double, DComplex>::CalculateFFT(double buffer[], DComp
 			const double sin_delta	= sin(delta_2);
 			const double alpha		= 2.0*sin_delta*sin_delta;
 			const double beta		= sin(delta);
+			double cos_rec			= 1.0f;
+			double sin_rec			= 0.0f;
 #endif
 #endif
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-#ifndef _USETWIDDLE_
-#ifdef _RECURRENCE_
-			double cos_rec					= 1.0f;
-			double sin_rec					= 0.0f; 
-#endif
-#endif
-			for(size_t R=0;R<stagesize2;R++)
-			{
-				DComplex temp_a	=	ffttransform[butterflyix+R];
-				DComplex temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
-				DComplex weight;
+			DComplex weight;
 #ifdef _USETWIDDLE_
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	-GetSinFactor(R,(i+1));
+			weight.re = GetCosFactor(R, (i + 1));
+			weight.im = -GetSinFactor(R, (i + 1));
 #else
 #ifndef _RECURRENCE_
-				const  double RT_Ratio = static_cast<float>(R)/stagesize;
-				weight.re	=	cos(PI2*RT_Ratio);
-				weight.im	=	-sin(PI2*RT_Ratio);
+			const  double RT_Ratio = static_cast<float>(R) / stagesize;
+			weight.re = cos(PI2 * RT_Ratio);
+			weight.im = -sin(PI2 * RT_Ratio);
 #else
-				double sin_old	= sin_rec;
-				double cos_old	= cos_rec;
-				cos_rec			= cos_old-(alpha*cos_old+beta*sin_old);
-				sin_rec			= sin_old-(alpha*sin_old-beta*cos_old);
-				weight.re		= cos_old;
-				weight.im		= -sin_old;
+			double sin_old = sin_rec;
+			double cos_old = cos_rec;
+			cos_rec = cos_old - (alpha * cos_old + beta * sin_old);
+			sin_rec = sin_old - (alpha * sin_old - beta * cos_old);
+			weight.re = cos_old;
+			weight.im = -sin_old;
 #endif
 #endif
+			for (size_t L = 0; L < looplength; L++)
+			{
+				size_t butterflyix = L << (i + 1);
+				DComplex temp_a	=	ffttransform[butterflyix+R];
+				DComplex temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
+
 #ifdef _C1x_
 				auto dummy								= weight*temp_b;
 				ffttransform[butterflyix+R]				= temp_a+dummy;
@@ -1984,39 +2006,35 @@ void CFFT<loglen, double, double, DComplex>::CalculateIFFT(DComplex buffer[], DC
 			const double sin_delta	= sin(delta_2);
 			const double alpha		= 2.0*sin_delta*sin_delta;
 			const double beta		= sin(delta);
+			double cos_rec			= 1.0f;
+			double sin_rec			= 0.0f;
 #endif
 #endif
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-#ifndef _USETWIDDLE_
-#ifdef _RECURRENCE_
-			double cos_rec					= 1.0f;
-			double sin_rec					= 0.0f; 
-#endif
-#endif
-			for(size_t R=0;R<stagesize2;R++)
-			{
-				DComplex temp_a	=	ffttransform[butterflyix+R];
-				DComplex temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
-				DComplex weight;
+			DComplex weight;
 #ifdef _USETWIDDLE_
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	GetSinFactor(R,(i+1));
+			weight.re = GetCosFactor(R, (i + 1));
+			weight.im = GetSinFactor(R, (i + 1));
 #else
 #ifndef _RECURRENCE_
-				const  double RT_Ratio = static_cast<float>(R)/stagesize;
-				weight.re	=	cos(PI2*RT_Ratio);
-				weight.im	=	sin(PI2*RT_Ratio);
+			const  double RT_Ratio = static_cast<float>(R) / stagesize;
+			weight.re = cos(PI2 * RT_Ratio);
+			weight.im = sin(PI2 * RT_Ratio);
 #else
-				double sin_old	= sin_rec;
-				double cos_old	= cos_rec;
-				cos_rec			= cos_old-(alpha*cos_old+beta*sin_old);
-				sin_rec			= sin_old-(alpha*sin_old-beta*cos_old);
-				weight.re		= cos_old;
-				weight.im		= sin_old;
+			double sin_old = sin_rec;
+			double cos_old = cos_rec;
+			cos_rec = cos_old - (alpha * cos_old + beta * sin_old);
+			sin_rec = sin_old - (alpha * sin_old - beta * cos_old);
+			weight.re = cos_old;
+			weight.im = sin_old;
 #endif
 #endif
+			for (size_t L = 0; L < looplength; L++)
+			{
+				size_t butterflyix = L << (i + 1);
+				DComplex temp_a	=	ffttransform[butterflyix+R];
+				DComplex temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
 #ifdef _C1x_
 				auto dummy								= weight*temp_b;
 				ffttransform[butterflyix+R]				= temp_a+dummy;
@@ -2061,39 +2079,35 @@ void CFFT<loglen, double, double, DComplex>::CalculateRealIFFT(DComplex buffer[]
 			const double sin_delta	= sin(delta_2);
 			const double alpha		= 2.0*sin_delta*sin_delta;
 			const double beta		= sin(delta);
+			double cos_rec			= 1.0;
+			double sin_rec			= 0.0;
 #endif
 #endif
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-#ifndef _USETWIDDLE_
-#ifdef _RECURRENCE_
-			double cos_rec					= 1.0f;
-			double sin_rec					= 0.0f; 
-#endif
-#endif
-			for(size_t R=0;R<stagesize2;R++)
-			{
-				DComplex temp_a	=	ffttransform[butterflyix+R];
-				DComplex temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
 				DComplex weight;
 #ifdef _USETWIDDLE_
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	GetSinFactor(R,(i+1));
+				weight.re = GetCosFactor(R, (i + 1));
+				weight.im = GetSinFactor(R, (i + 1));
 #else
 #ifndef _RECURRENCE_
-				const  double RT_Ratio = static_cast<float>(R)/stagesize;
-				weight.re	=	cos(PI2*RT_Ratio);
-				weight.im	=	sin(PI2*RT_Ratio);
+				const  double RT_Ratio = static_cast<float>(R) / stagesize;
+				weight.re = cos(PI2 * RT_Ratio);
+				weight.im = sin(PI2 * RT_Ratio);
 #else
-				double sin_old	= sin_rec;
-				double cos_old	= cos_rec;
-				cos_rec			= cos_old-(alpha*cos_old+beta*sin_old);
-				sin_rec			= sin_old-(alpha*sin_old-beta*cos_old);
-				weight.re		= cos_old;
-				weight.im		= sin_old;
+				double sin_old = sin_rec;
+				double cos_old = cos_rec;
+				cos_rec = cos_old - (alpha * cos_old + beta * sin_old);
+				sin_rec = sin_old - (alpha * sin_old - beta * cos_old);
+				weight.re = cos_old;
+				weight.im = sin_old;
 #endif
 #endif
+			for (size_t L = 0; L < looplength; L++)
+			{
+				size_t butterflyix = L << (i + 1);
+				DComplex temp_a	=	ffttransform[butterflyix+R];
+				DComplex temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
 #ifdef _C1x_
 				auto dummy								= weight*temp_b;
 				ffttransform[butterflyix+R]				= temp_a+dummy;
@@ -2129,23 +2143,23 @@ void CFFT<loglen, double, double, DComplex>::CalculateRealFFT(double buffer[], D
 #endif
 		size_t stagesize2	= static_cast<size_t>(1)<<i;
 		size_t looplength	= length>>(i+1);
-		for(size_t L=0;L<looplength;L++)
+		for (size_t R = 0; R < stagesize2; R++)
 		{
-			size_t butterflyix = L<<(i+1);
-			for(size_t R=0;R<stagesize2;R++)
-			{
-				DComplex temp_a	=	ffttransform[butterflyix+R];
-				DComplex temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
-				DComplex weight;
+			DComplex weight;
 #ifdef _USETWIDDLE_
-				weight.re	=   GetCosFactor(R,(i+1));
-				weight.im	=	-GetSinFactor(R,(i+1));
+			weight.re = GetCosFactor(R, (i + 1));
+			weight.im = -GetSinFactor(R, (i + 1));
 #else
-				static const double PI2 = 6.2831853071795864769252868;
-				const  double RT_Ratio = static_cast<float>(R)/stagesize;
-				weight.re	=	cos(PI2*RT_Ratio);
-				weight.im	=	-sin(PI2*RT_Ratio);
+			static const double PI2 = 6.2831853071795864769252868;
+			const  double RT_Ratio = static_cast<float>(R) / stagesize;
+			weight.re = cos(PI2 * RT_Ratio);
+			weight.im = -sin(PI2 * RT_Ratio);
 #endif
+			for (size_t L = 0; L < looplength; L++)
+			{
+				size_t butterflyix = L << (i + 1);
+				DComplex temp_a	=	ffttransform[butterflyix+R];
+				DComplex temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages		
 #ifdef _C1x_
 				auto dummy								= weight*temp_b;
 				ffttransform[butterflyix+R]				= temp_a+dummy;
@@ -2295,13 +2309,13 @@ void CFFT<loglen, double, double, DComplex>::Convert2ComplexDFT(DComplex transfo
 
 #ifndef _USETWIDDLE_
 #ifdef _RECURRENCE_
-			const double delta		= PI/length;
-			const double delta_2	= 0.5*delta;
-			const double sin_delta	= sin(delta_2);
-			const double alpha		= 2.0*sin_delta*sin_delta;
-			const double beta		= sin(delta);
-			double		 sineiter	= 0;
-			double		 cosineiter	= 1;
+	const double delta		= PI/length;
+	const double delta_2	= 0.5*delta;
+	const double sin_delta	= sin(delta_2);
+	const double alpha		= 2.0*sin_delta*sin_delta;
+	const double beta		= sin(delta);
+	double		 sineiter	= 0.;
+	double		 cosineiter	= 1.;
 #endif
 #endif
 
@@ -2362,14 +2376,14 @@ void CFFT<loglen, double, double, DComplex>::Convert2ComplexDFT(DComplex transfo
 		transform[length-i].im	= resimag2;
 	}
 
-			double H1R		= transform[0].re+transform[0].re;
+		double H1R		= transform[0].re+transform[0].re;
 		double H1I		= transform[0].im-transform[0].im;//because conj complex
 		double H2R		= transform[0].re-transform[0].re;//that is the second term
 		double H2I		= transform[0].im+transform[0].im;//adding, because conj complex
-				double cosine	= cos(PI*0/length);//length is reduced length, therefore we compensate with pi instead of 2*pi
+		double cosine	= cos(PI*0/length);//length is reduced length, therefore we compensate with pi instead of 2*pi
 		double sine		= sin(PI*0/length);
 
-				double res1i	= H2R*cosine-H2I*sine;
+		double res1i	= H2R*cosine-H2I*sine;
 		double res1r	= -(H2I*cosine+H2R*sine);//complex i is integrated
 
 		double resreal	= 0.5f*(H1R+res1r);
@@ -2439,9 +2453,9 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	for (unsigned int i=0;i<1024;i++)
 	{
-		fSignal[i]=1e8*cos(512*(6.283185307179586476925286*i)/1024)+1e7*sin((6.283185307179586476925286*i)/1024)-50e3;
+		fSignal[i]=1.f*cos(512.f*(6.283185307179586476925286f*static_cast<float>(i))/1024.f)+1.f*sin((6.283185307179586476925286f*static_cast<float>(i))/1024.f)-10e3f;
 		dfSignal[i]=1e8*cos(512*(6.283185307179586476925286*i)/1024)+1e7*sin((6.283185307179586476925286*i)/1024)-50e3;
-		Signal[i]=1e8*cos(512*(6.283185307179586476925286*i)/1024)+1e7*sin((6.283185307179586476925286*i)/1024)-50e3;
+		Signal[i]=static_cast<int>(1e8*cos(512*(6.283185307179586476925286*i)/1024)+1e7*sin((6.283185307179586476925286*i)/1024)-0e3);
 	}
 	//Signal[0]=1E9;
 	//dfSignal[0]=1e9;
@@ -2471,7 +2485,17 @@ int _tmain(int argc, _TCHAR* argv[])
 	CFFT<10, double, double, DComplex> dummy;
 	mf_FFT.CalculateRealFFT(fSignal,fTransform);
 	mf_FFT.CalculateRealIFFT(fTransform, reinterpret_cast<FComplex*>(resultf));
+	std::vector<double> real;
+	std::vector<double> imag;
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		real.push_back(fTransform[i].re);
+		imag.push_back(fTransform[i].im);
+	}
+	//real[5] = 1;
 
+	plot<double>(real, imag);
+	//plot<double>(real);
 	size_t Exponent1, Exponent2;
 	m_FFT.CalculateRealFFT(Signal,TransformScaling,SCALEINPOUT,&Exponent1);
 	m_FFT.CalculateRealIFFT(TransformScaling,Transform,SCALEINPOUT,&Exponent2);
