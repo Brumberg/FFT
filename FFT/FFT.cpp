@@ -346,7 +346,7 @@ void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[]
 				ffttransform[butterflyix+R]				= static_cast<TFFT>((temp_a<<bitcorrection)+dummy);
 				ffttransform[butterflyix+R+stagesize2]	= static_cast<TFFT>((temp_a<<bitcorrection)-dummy);
 #else
-				TFFT::ACCTYPE dummy			= weight*temp_b;
+				typename TFFT::ACCTYPE dummy			= weight*temp_b;
 				ffttransform[butterflyix+R]				= static_cast<TFFT>((temp_a<<bitcorrection)+dummy);
 				ffttransform[butterflyix+R+stagesize2]	= static_cast<TFFT>((temp_a<<bitcorrection)-dummy);
 #endif
@@ -396,12 +396,13 @@ void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[], EN
 		}
 	}
 
-	typename TFFT::DATATYPE MaxOccVal=0;
+	
 	for(size_t i=0; i<ldlen;i++)
 	{
 		size_t stagesize	= 1<<(i+1);
 		size_t stagesize2	= 1<<i;
 		size_t looplength	= length>>(i+1);
+		typename TFFT::DATATYPE MaxOccVal = 0;
 		for (size_t R = 0; R < stagesize2; R++)
 		{
 			TFFT weight;
@@ -439,9 +440,13 @@ void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[], EN
 		}
 		*pBlockExponent += Exponent;
 
-		typename TFFT::DATATYPE mask=0;
-		mask		= (~mask)<<(sizeof(TFFT::DATATYPE)*8-2);
-		for (Exponent=0;!(MaxOccVal&mask);MaxOccVal<<=1){Exponent++;}
+
+		if (MaxOccVal != 0)
+		{
+			typename TFFT::DATATYPE mask = 0;
+			mask = (~mask) << (sizeof(TFFT::DATATYPE) * 8 - 2);
+			for (Exponent = 0; !(MaxOccVal & mask); MaxOccVal <<= 1) { Exponent++; }
+		}
 		MaxOccVal	= 0;
 	}
 }
@@ -491,12 +496,13 @@ void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[]
 		}
 	}
 
-	typename TFFT::DATATYPE MaxOccVal=0;
+	
 	for(size_t i=0; i<ldlen;i++)
 	{
 		size_t stagesize	= 1<<(i+1);
 		size_t stagesize2	= 1<<i;
 		size_t looplength	= length>>(i+1);
+		typename TFFT::DATATYPE MaxOccVal = 0;
 		for (size_t R = 0; R < stagesize2; R++)
 		{
 			TFFT weight;
@@ -534,11 +540,12 @@ void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[]
 			}
 		}
 		*pBlockExponent += Exponent;
-
-		typename TFFT::DATATYPE mask=0;
-		mask		= (~mask)<<(sizeof(TFFT::DATATYPE)*8-2);
-		for (Exponent=0;!(MaxOccVal&mask);MaxOccVal<<=1){Exponent++;}
-		MaxOccVal	= 0;
+		if (MaxOccVal != 0)
+		{
+			typename TFFT::DATATYPE mask = 0;
+			mask = (~mask) << (sizeof(TFFT::DATATYPE) * 8 - 2);
+			for (Exponent = 0; !(MaxOccVal & mask); MaxOccVal <<= 1) { Exponent++; }
+		}
 	}
 }
 
@@ -679,12 +686,13 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[]
 		}
 	}
 
-	typename TFFT::DATATYPE MaxOccVal=0;
+	
 	for(size_t i=0; i<ldlen;i++)
 	{
 		//size_t stagesize	= static_cast<size_t>(1)<<(i+1);
 		size_t stagesize2	= static_cast<size_t>(1)<<i;
 		size_t looplength	= length>>(i+1);
+		typename TFFT::DATATYPE MaxOccVal = 0;
 		for (size_t R = 0; R < stagesize2; R++)
 		{
 			TFFT weight;
@@ -722,11 +730,12 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[]
 			}
 		}
 		*pBlockExponent += Exponent;
-
-		typename TFFT::DATATYPE mask=0;
-		mask		= (~mask)<<(sizeof(TFFT::DATATYPE)*8-2);
-		for (Exponent=0;!(MaxOccVal&mask);MaxOccVal<<=1){Exponent++;}
-		MaxOccVal	= 0;
+		if (MaxOccVal != 0)
+		{
+			typename TFFT::DATATYPE mask = 0;
+			mask = (~mask) << (sizeof(TFFT::DATATYPE) * 8 - 2);
+			for (Exponent = 0; !(MaxOccVal & mask); MaxOccVal <<= 1) { Exponent++; }
+		}
 	}
 	Convert2HalfDFT(ffttransform, Exponent);
 	*pBlockExponent += Exponent;
@@ -819,12 +828,13 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 		Exponent=0;
 	}
 
-	typename TFFT::DATATYPE MaxOccVal=0;
-	for(size_t i=0; i<ldlen;i++)
+	
+	for (size_t i = 0; i < ldlen; i++)
 	{
 		//size_t stagesize	= static_cast<size_t>(1)<<(i+1);
-		size_t stagesize2	= static_cast<size_t>(1)<<i;
-		size_t looplength	= length>>(i+1);
+		size_t stagesize2 = static_cast<size_t>(1) << i;
+		size_t looplength = length >> (i + 1);
+		typename TFFT::DATATYPE MaxOccVal = 0;
 		for (size_t R = 0; R < stagesize2; R++)
 		{
 			TFFT weight;
@@ -838,35 +848,37 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 			for (size_t L = 0; L < looplength; L++)
 			{
 				size_t butterflyix = L << (i + 1);
-				TFFT temp_a	=	ffttransform[butterflyix+R];
-				TFFT temp_b =	ffttransform[butterflyix+R+stagesize2];//load individual stages
-				temp_a.re	<<= Exponent;
-				temp_a.im	<<= Exponent;
-				temp_b.re	<<= Exponent;
-				temp_b.im	<<= Exponent;
-				
+				TFFT temp_a = ffttransform[butterflyix + R];
+				TFFT temp_b = ffttransform[butterflyix + R + stagesize2];//load individual stages
+				temp_a.re <<= Exponent;
+				temp_a.im <<= Exponent;
+				temp_b.re <<= Exponent;
+				temp_b.im <<= Exponent;
+
 #ifdef _C1x_
-				auto dummy = weight*temp_b;
-				ffttransform[butterflyix+R]				= static_cast<TFFT>((temp_a<<bitcorrection)+dummy);
-				ffttransform[butterflyix+R+stagesize2]	= static_cast<TFFT>((temp_a<<bitcorrection)-dummy);
+				auto dummy = weight * temp_b;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
 #else
-				typename TFFT::ACCTYPE dummy			= weight*temp_b;
-				ffttransform[butterflyix+R]				= static_cast<TFFT>((temp_a<<bitcorrection)+dummy);
-				ffttransform[butterflyix+R+stagesize2]	= static_cast<TFFT>((temp_a<<bitcorrection)-dummy);
+				typename TFFT::ACCTYPE dummy = weight * temp_b;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
 #endif
-				MaxOccVal = MaxOccVal>=abs(ffttransform[butterflyix+R].re)?MaxOccVal:abs(ffttransform[butterflyix+R].re);
-				MaxOccVal = MaxOccVal>=abs(ffttransform[butterflyix+R+stagesize2].re)?MaxOccVal:abs(ffttransform[butterflyix+R+stagesize2].re);
-				MaxOccVal = MaxOccVal>=abs(ffttransform[butterflyix+R].im)?MaxOccVal:abs(ffttransform[butterflyix+R].im);
-				MaxOccVal = MaxOccVal>=abs(ffttransform[butterflyix+R+stagesize2].im)?MaxOccVal:abs(ffttransform[butterflyix+R+stagesize2].im);
+				MaxOccVal = MaxOccVal >= abs(ffttransform[butterflyix + R].re) ? MaxOccVal : abs(ffttransform[butterflyix + R].re);
+				MaxOccVal = MaxOccVal >= abs(ffttransform[butterflyix + R + stagesize2].re) ? MaxOccVal : abs(ffttransform[butterflyix + R + stagesize2].re);
+				MaxOccVal = MaxOccVal >= abs(ffttransform[butterflyix + R].im) ? MaxOccVal : abs(ffttransform[butterflyix + R].im);
+				MaxOccVal = MaxOccVal >= abs(ffttransform[butterflyix + R + stagesize2].im) ? MaxOccVal : abs(ffttransform[butterflyix + R + stagesize2].im);
 
 			}
 		}
 		*pBlockExponent += Exponent;
 
-		typename TFFT::DATATYPE mask=0;
-		mask		= (~mask)<<(sizeof(TFFT::DATATYPE)*8-2);
-		for (Exponent=0;!(MaxOccVal&mask);MaxOccVal<<=1){Exponent++;}
-		MaxOccVal	= 0;
+		if (MaxOccVal != 0)
+		{
+			typename TFFT::DATATYPE mask = 0;
+			mask = (~mask) << (sizeof(TFFT::DATATYPE) * 8 - 2);
+			for (Exponent = 0; !(MaxOccVal & mask); MaxOccVal <<= 1) { Exponent++; }
+		}
 	}
 }
 
@@ -1175,9 +1187,10 @@ template<size_t loglen> class CFFT<loglen,float,float,FComplex> {
 		float	ma_TwiddleFactors[1<<(loglen-1)];
 
 		void    CreateTwiddleFactors(size_t length, float twiddlefactors[]);
+		float   GetCosFactor(size_t stage, size_t stageshift);
+		float   GetSinFactor(size_t stage, size_t stageshift);
 #endif
-		float      GetCosFactor(size_t stage, size_t stageshift);
-		float      GetSinFactor(size_t stage, size_t stageshift);
+
 
 
 		template <size_t bitsize> size_t swap(size_t pointer)
@@ -1301,7 +1314,7 @@ void CFFT<loglen, float, float, FComplex>::ReorderRealSamplesInPlace(FComplex in
 	}
 }
 
-
+#ifdef _USETWIDDLE_
 template <size_t loglen>
 float CFFT<loglen, float, float, FComplex>::GetCosFactor(size_t stage, size_t stageshift)
 {
@@ -1324,6 +1337,7 @@ float CFFT<loglen, float, float, FComplex>::GetSinFactor(size_t stage, size_t st
 	size_t k = (((len*stage)>>stageshift)+(len>>2))&mask;
 	return k<len4?ma_TwiddleFactors[k]:-ma_TwiddleFactors[k];
 }
+#endif
 
 template <size_t loglen>
 void CFFT<loglen, float, float, FComplex>::CalculateFFT(float buffer[], FComplex ffttransform[])
@@ -1768,10 +1782,10 @@ template<size_t loglen> class CFFT<loglen,double,double,DComplex> {
 		double	ma_TwiddleFactors[1<<(loglen-1)];
 
 		void    CreateTwiddleFactors(size_t length, double twiddlefactors[]);
-#endif
+
 		double	GetCosFactor(size_t stage, size_t stageshift);
 		double	GetSinFactor(size_t stage, size_t stageshift);
-
+#endif
 
 		template <size_t bitsize> size_t swap(size_t pointer)
 		{
@@ -1897,6 +1911,7 @@ void CFFT<loglen, double, double, DComplex>::ReorderRealSamplesInPlace(DComplex 
 	}
 }
 
+#ifdef _USETWIDDLE_
 template <size_t loglen>
 double CFFT<loglen, double, double, DComplex>::GetCosFactor(size_t stage, size_t stageshift)
 {
@@ -1919,6 +1934,7 @@ double CFFT<loglen, double, double, DComplex>::GetSinFactor(size_t stage, size_t
 	size_t k = (((len*stage)>>stageshift)+(len>>2))&mask;
 	return k<len4?ma_TwiddleFactors[k]:-ma_TwiddleFactors[k];
 }
+#endif
 
 template <size_t loglen>
 void CFFT<loglen, double, double, DComplex>::CalculateFFT(double buffer[], DComplex ffttransform[])
@@ -2453,7 +2469,7 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	for (unsigned int i=0;i<1024;i++)
 	{
-		fSignal[i]=1.f*cos(512.f*(6.283185307179586476925286f*static_cast<float>(i))/1024.f)+1.f*sin((6.283185307179586476925286f*static_cast<float>(i))/1024.f)-10e3f;
+		fSignal[i]=1.f*cos(512.f*(6.283185307179586476925286f*static_cast<float>(i))/1024.f)+1.f*sin((2*6.283185307179586476925286f*static_cast<float>(i))/1024.f)-10e3f;
 		dfSignal[i]=1e8*cos(512*(6.283185307179586476925286*i)/1024)+1e7*sin((6.283185307179586476925286*i)/1024)-50e3;
 		Signal[i]=static_cast<int>(1e8*cos(512*(6.283185307179586476925286*i)/1024)+1e7*sin((6.283185307179586476925286*i)/1024)-0e3);
 	}
@@ -2502,6 +2518,16 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	size_t exponent;
 	m_FFT2.CalculateRealFFT(Signal,RealTransform,SCALEINPOUT,&exponent);
+
+	DComplex test_signal[1024];
+	DComplex test_result[1024];
+	size_t index = 0;
+	for (DComplex& a : test_signal)
+	{
+		a.re = fSignal[index++];
+		a.im = 0;
+	}
+	CalculateDFT(1024, test_signal, test_result);
 
 	//dummy.Convert2HalfDFT(Reference);
 	return 0;
