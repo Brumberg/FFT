@@ -365,7 +365,7 @@ void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[], EN
 	size_t ldlen	= loglen;
 	size_t length	= 1<<loglen;
 	size_t Exponent	= 0;
-	*pBlockExponent = 0;
+	*pBlockExponent = loglen;
 	ReorderSamples(buffer, ffttransform);
 
 	if (rescale==SCALE_INPUT||rescale==SCALEINPOUT)
@@ -438,7 +438,7 @@ void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[], EN
 
 			}
 		}
-		*pBlockExponent += Exponent;
+		*pBlockExponent -= Exponent;
 
 
 		if (MaxOccVal != 0)
@@ -461,7 +461,7 @@ void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[]
 	size_t ldlen	= loglen;
 	size_t length	= 1<<loglen;
 	size_t Exponent	= 0;
-	*pBlockExponent = 0;
+	*pBlockExponent = loglen;
 	ReorderSamples(buffer, ffttransform);
 
 	if (rescale==SCALE_INPUT||rescale==SCALEINPOUT)
@@ -539,7 +539,7 @@ void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[]
 
 			}
 		}
-		*pBlockExponent += Exponent;
+		*pBlockExponent -= Exponent;
 		if (MaxOccVal != 0)
 		{
 			typename TFFT::DATATYPE mask = 0;
@@ -655,7 +655,7 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[]
 	size_t ldlen	= loglen-1;
 	size_t length	= 1<<(loglen-1);
 	size_t Exponent	= 0;
-	*pBlockExponent = 0;
+	*pBlockExponent = loglen;
 	ReorderRealSamples(buffer, ffttransform);
 
 	if (rescale==SCALE_INPUT||rescale==SCALEINPOUT)
@@ -729,7 +729,7 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[]
 
 			}
 		}
-		*pBlockExponent += Exponent;
+		*pBlockExponent -= Exponent;
 		if (MaxOccVal != 0)
 		{
 			typename TFFT::DATATYPE mask = 0;
@@ -738,7 +738,7 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[]
 		}
 	}
 	Convert2HalfDFT(ffttransform, Exponent);
-	*pBlockExponent += Exponent;
+	*pBlockExponent -= Exponent;
 }
 
 
@@ -752,7 +752,7 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 	size_t ldlen	= loglen-1;
 	size_t length	= 1<<(loglen-1);
 	size_t Exponent	= 0;
-	*pBlockExponent = 0;
+	*pBlockExponent = loglen;
 	
 	memcpy(ffttransform,buffer,length*sizeof(TFFT));
 
@@ -790,7 +790,7 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 	}
 	Convert2ComplexDFT(ffttransform,Exponent);
 	ReorderRealSamplesInPlace(ffttransform);
-	*pBlockExponent += Exponent;
+	*pBlockExponent -= Exponent;
 
 	if (rescale==SCALEINPOUT)
 	{
@@ -871,7 +871,7 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 
 			}
 		}
-		*pBlockExponent += Exponent;
+		*pBlockExponent -= Exponent;
 
 		if (MaxOccVal != 0)
 		{
