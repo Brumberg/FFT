@@ -200,14 +200,18 @@ void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[])
 				size_t butterflyix = L << (i + 1);
 				TFFT temp_a = ffttransform[butterflyix + R];
 				TFFT temp_b = ffttransform[butterflyix + R + stagesize2];//load individual stages
+
+				static const size_t req_downshifts = (sizeof(TFFT::OFWTYPE) - sizeof(T)) * 8u;
 #ifdef _C1x_
 				auto dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				auto temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #else
 				typename TFFT::ACCTYPE dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				typename TFFT::ACCTYPE temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #endif
 			}
 		}
@@ -243,15 +247,19 @@ void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[]
 			{
 				size_t butterflyix = L << (i + 1);
 				TFFT temp_a = ffttransform[butterflyix + R];
-				TFFT temp_b = ffttransform[butterflyix + R + stagesize2];//load individual stages	
+				TFFT temp_b = ffttransform[butterflyix + R + stagesize2];//load individual stages
+				
+				static const size_t req_downshifts = (sizeof(TFFT::OFWTYPE) - sizeof(T)) * 8u;
 #ifdef _C1x_
 				auto dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				auto temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #else
 				typename TFFT::ACCTYPE dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				typename TFFT::ACCTYPE temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #endif
 			}
 		}
@@ -325,14 +333,19 @@ void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[], EN
 				temp_a.im <<= Exponent;
 				temp_b.re <<= Exponent;
 				temp_b.im <<= Exponent;
+
+				static const size_t req_downshifts = (sizeof(TFFT::OFWTYPE) - sizeof(T)) * 8u;
+
 #ifdef _C1x_
 				auto dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				auto temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #else
 				typename TFFT::ACCTYPE dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				typename TFFT::ACCTYPE temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #endif
 				MaxOccVal = MaxOccVal >= abs(ffttransform[butterflyix + R].re) ? MaxOccVal : abs(ffttransform[butterflyix + R].re);
 				MaxOccVal = MaxOccVal >= abs(ffttransform[butterflyix + R + stagesize2].re) ? MaxOccVal : abs(ffttransform[butterflyix + R + stagesize2].re);
@@ -426,14 +439,17 @@ void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[]
 				temp_b.re <<= Exponent;
 				temp_b.im <<= Exponent;
 
+				static const size_t req_downshifts = (sizeof(TFFT::OFWTYPE) - sizeof(T)) * 8u;
 #ifdef _C1x_
 				auto dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				auto temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #else
 				typename TFFT::ACCTYPE dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				typename TFFT::ACCTYPE temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #endif
 				MaxOccVal = MaxOccVal >= abs(ffttransform[butterflyix + R].re) ? MaxOccVal : abs(ffttransform[butterflyix + R].re);
 				MaxOccVal = MaxOccVal >= abs(ffttransform[butterflyix + R + stagesize2].re) ? MaxOccVal : abs(ffttransform[butterflyix + R + stagesize2].re);
@@ -483,14 +499,19 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[]
 				size_t butterflyix = L << (i + 1);
 				TFFT temp_a = ffttransform[butterflyix + R];
 				TFFT temp_b = ffttransform[butterflyix + R + stagesize2];//load individual stages
+
+				static const size_t req_downshifts = (sizeof(TFFT::OFWTYPE) - sizeof(T)) * 8u;
+
 #ifdef _C1x_
 				auto dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				auto temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #else
 				typename TFFT::ACCTYPE dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				typename TFFT::ACCTYPE temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #endif
 			}
 		}
@@ -534,14 +555,19 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 				size_t butterflyix = L << (i + 1);
 				TFFT temp_a = ffttransform[butterflyix + R];
 				TFFT temp_b = ffttransform[butterflyix + R + stagesize2];//load individual stages
+				
+				static const size_t req_downshifts = (sizeof(TFFT::OFWTYPE) - sizeof(T)) * 8u;
+
 #ifdef _C1x_
 				auto dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				auto temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> );
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #else
 				typename TFFT::ACCTYPE dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				typename TFFT::ACCTYPE temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #endif
 			}
 		}
@@ -616,14 +642,18 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[]
 				temp_b.re <<= Exponent;
 				temp_b.im <<= Exponent;
 
+				static const size_t req_downshifts = (sizeof(TFFT::OFWTYPE) - sizeof(T)) * 8u;
+
 #ifdef _C1x_
 				auto dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				auto temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #else
 				typename TFFT::ACCTYPE dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				typename TFFT::ACCTYPE temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #endif
 				MaxOccVal = MaxOccVal >= abs(ffttransform[butterflyix + R].re) ? MaxOccVal : abs(ffttransform[butterflyix + R].re);
 				MaxOccVal = MaxOccVal >= abs(ffttransform[butterflyix + R + stagesize2].re) ? MaxOccVal : abs(ffttransform[butterflyix + R + stagesize2].re);
@@ -758,14 +788,18 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 				temp_b.re <<= Exponent;
 				temp_b.im <<= Exponent;
 
+				static const size_t req_downshifts = (sizeof(TFFT::OFWTYPE) - sizeof(T)) * 8u;
+
 #ifdef _C1x_
 				auto dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				auto temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #else
 				typename TFFT::ACCTYPE dummy = weight * temp_b;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a << bitcorrection) + dummy);
-				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a << bitcorrection) - dummy);
+				typename TFFT::ACCTYPE temp_a_scaled = temp_a << bitcorrection;
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
+				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #endif
 				MaxOccVal = MaxOccVal >= abs(ffttransform[butterflyix + R].re) ? MaxOccVal : abs(ffttransform[butterflyix + R].re);
 				MaxOccVal = MaxOccVal >= abs(ffttransform[butterflyix + R + stagesize2].re) ? MaxOccVal : abs(ffttransform[butterflyix + R + stagesize2].re);
