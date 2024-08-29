@@ -222,6 +222,51 @@ TEST(sample_test_case, float64_cos_sin)
 	}
 }
 
+TEST(sample_test_case, float64_cos_sin_complex)
+{
+	CFFT<10, double, double, FFT_INTERNALS::f64_complex> mf_FFT;
+
+	static CDSPArray<FFT_INTERNALS::f64_complex, 512> spectrum;
+	static CDSPArray<double, 1024> ref_signal;
+	static CDSPArray<double, 1024> transformed_signal;
+	for (size_t i = 0; i < 1024; i++)
+	{
+		ref_signal.push_back(65536 * 2048 * cos(512. * (6.283185307179586476925286 * static_cast<double>(i)) / 1024.) + 65536 * 4096. * sin((2 * 6.283185307179586476925286 * static_cast<double>(i)) / 1024.) - 65536 * 10);
+	}
+	spectrum.resize(512);
+	transformed_signal.resize(1024);
+	mf_FFT.CalculateRealFFT(ref_signal.data(), spectrum.data());
+	static const FFT_INTERNALS::f64_complex normalizer = { 1. / 1024, 0 };
+	for (auto& i : spectrum)
+	{
+		i = i * normalizer;
+	}
+	mf_FFT.CalculateRealIFFT(spectrum.data(), reinterpret_cast<FFT_INTERNALS::f64_complex*>(transformed_signal.data()));
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		ASSERT_NEAR(ref_signal[i], transformed_signal[i]*1024, 1e-3);
+	}
+
+	for (size_t i = 0; i < 512; ++i)
+	{
+		if (i == 0)
+		{
+			ASSERT_NEAR(spectrum[i].re, -10*65536, 1e-1);
+			ASSERT_NEAR(spectrum[i].im, 65536 * 2048, 1e-1);
+		}
+		else if (i == 2)
+		{
+			ASSERT_NEAR(spectrum[i].re, 0, 1e-4);
+			ASSERT_NEAR(spectrum[i].im, -65536 * 4096./2, 1e-1);
+		}
+		else
+		{
+			ASSERT_NEAR(spectrum[i].re, 0, 5e-2);
+			ASSERT_NEAR(spectrum[i].im, 0, 5e-2);
+		}
+	}
+}
+
 TEST(sample_test_case, int16_cos_sin)
 {
 	CFFT<10, short, short, FFT_INTERNALS::i16_complex> m_FFT(32767);
@@ -342,7 +387,7 @@ TEST(sample_test_case, int32_cos_sin_real)
 	static CDSPArray<int, 1024> transformed_signal;
 	for (size_t i = 0; i < 1024; i++)
 	{
-		const double v = 8192. * cos(512. * (6.283185307179586476925286 * static_cast<double>(i)) / 1024.) + 4096. * sin((2 * 6.283185307179586476925286 * static_cast<double>(i)) / 1024.) - 10;
+		const double v = 65536 * 2048 * cos(512. * (6.283185307179586476925286 * static_cast<double>(i)) / 1024.) + 65536 * 4096. * sin((2 * 6.283185307179586476925286 * static_cast<double>(i)) / 1024.) - 65536 * 10;
 		ref_signal.push_back(static_cast<int>(v));
 	}
 	spectrum.resize(512);
@@ -358,31 +403,30 @@ TEST(sample_test_case, int32_cos_sin_real)
 	{
 		if (i == 0)
 		{
-			ASSERT_NEAR(spectrum[i].re, -10, 10);
-			ASSERT_NEAR(spectrum[i].im, 8192, 10);
+			ASSERT_NEAR(spectrum[i].re, -10*65536, 256);
+			ASSERT_NEAR(spectrum[i].im, 65536 * 2048, 256);
 		}
 		else if (i == 2)
 		{
-			ASSERT_NEAR(spectrum[i].re, 0, 10);
-			ASSERT_NEAR(spectrum[i].im, -2048, 10);
+			ASSERT_NEAR(spectrum[i].re, 0, 256);
+			ASSERT_NEAR(spectrum[i].im, -65536 * 4096./2, 256);
 		}
 		else
 		{
-			ASSERT_NEAR(spectrum[i].re, 0, 10);
-			ASSERT_NEAR(spectrum[i].im, 0, 10);
+			ASSERT_NEAR(spectrum[i].re, 0, 256);
+			ASSERT_NEAR(spectrum[i].im, 0, 256);
 		}
 	}
-#if 0	
+#if 1	
 	std::vector<double> signal_ref;
 	std::vector<double> signal_transformed;
-	for (size_t i = 0; i < 1024; ++i)
+	for (size_t i = 0; i < 30; ++i)
 	{
-		signal_ref.push_back(i16Signal[i]);
+		signal_ref.push_back(ref_signal[i]);
 	}
-	for (size_t i = 0; i < 512; ++i)
+	for (size_t i = 0; i < 30; ++i)
 	{
-		signal_transformed.push_back(i16Transform[i].re);
-		signal_transformed.push_back(i16Transform[i].im);
+		signal_transformed.push_back(2*transformed_signal[i]);
 	}
 	plot<double>(signal_ref, signal_transformed);
 #endif
@@ -501,7 +545,7 @@ TEST(sample_test_case, int32_cos_sin_complex_mixed_freq)
 	}
 	plot<double>(signal_ref, signal_transformed);
 #endif
-	}
+}
 
 TEST(sample_test_case, float32_Hanning)
 {

@@ -27,11 +27,11 @@ private:
 
 	template <size_t bitsize> size_t swap(size_t pointer)
 	{
-		const size_t size = bitsize >> 1;//for an example for 11 size is 5
-		const size_t lowermask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> size) << size);
-		const size_t uppermask = lowermask << (bitsize - size);
-		const size_t mask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> bitsize) << bitsize);
-		const size_t remaining = (~(lowermask | uppermask)) & mask;
+		static const size_t size = bitsize >> 1;//for an example for 11 size is 5
+		static const size_t lowermask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> size) << size);
+		static const size_t uppermask = lowermask << (bitsize - size);
+		static const size_t mask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> bitsize) << bitsize);
+		static const size_t remaining = (~(lowermask | uppermask)) & mask;
 		pointer = (swap<size>(lowermask & pointer) << (bitsize - size)) | swap<size>((uppermask & pointer) >> (bitsize - size)) | (remaining & pointer);
 		return pointer;
 	}
@@ -48,11 +48,11 @@ private:
 
 	template <size_t bitsize> size_t bitreversal(size_t pointer)
 	{
-		const size_t size = (bitsize) >> 1;//for an example for 11 size is 5
-		const size_t lowermask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> size) << size);
-		const size_t uppermask = lowermask << (bitsize - size);
-		const size_t mask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> (bitsize)) << (bitsize));
-		const size_t remaining = (~(lowermask | uppermask)) & mask;
+		static const size_t size = (bitsize) >> 1;//for an example for 11 size is 5
+		static const size_t lowermask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> size) << size);
+		static const size_t uppermask = lowermask << (bitsize - size);
+		static const size_t mask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> (bitsize)) << (bitsize));
+		static const size_t remaining = (~(lowermask | uppermask)) & mask;
 		pointer = (swap<size>(lowermask & pointer) << (bitsize - size)) | swap<size>((uppermask & pointer) >> (bitsize - size)) | (remaining & pointer);
 		return pointer;
 	}
@@ -82,7 +82,7 @@ void CFFT<loglen, TW, T, TFFT>::CreateTwiddleFactors(size_t length, TW twiddlefa
 {
 	static const double PI2 = 6.283185307179586476925286f;
 
-	size_t len = 1 << loglen;
+	static const size_t len = 1 << loglen;
 	if (2 * length >= len)
 	{
 		const size_t len2 = len >> 1;
@@ -96,7 +96,7 @@ void CFFT<loglen, TW, T, TFFT>::CreateTwiddleFactors(size_t length, TW twiddlefa
 template <size_t loglen, typename TW, typename T, typename TFFT>
 void CFFT<loglen, TW, T, TFFT>::ReorderSamples(T in[], TFFT data[])
 {
-	size_t length = 1 << loglen;
+	static const size_t length = 1 << loglen;
 	for (size_t i = 0; i < length; i++)
 	{
 		size_t reordered = bitreversal<loglen>(i);
@@ -108,7 +108,7 @@ void CFFT<loglen, TW, T, TFFT>::ReorderSamples(T in[], TFFT data[])
 template <size_t loglen, typename TW, typename T, typename TFFT>
 void CFFT<loglen, TW, T, TFFT>::ReorderSamples(TFFT in[], TFFT data[])
 {
-	size_t length = 1 << loglen;
+	static const size_t length = 1 << loglen;
 	for (size_t i = 0; i < length; i++)
 	{
 		size_t reordered = bitreversal<loglen>(i);
@@ -119,7 +119,7 @@ void CFFT<loglen, TW, T, TFFT>::ReorderSamples(TFFT in[], TFFT data[])
 template <size_t loglen, typename TW, typename T, typename TFFT>
 void CFFT<loglen, TW, T, TFFT>::ReorderRealSamples(T in[], TFFT data[])
 {
-	size_t length = 1 << (loglen - 1);
+	static const size_t length = 1 << (loglen - 1);
 	for (size_t i = 0; i < length; i++)
 	{
 		size_t reordered = bitreversal<loglen - 1>(i);
@@ -131,7 +131,7 @@ void CFFT<loglen, TW, T, TFFT>::ReorderRealSamples(T in[], TFFT data[])
 template <size_t loglen, typename TW, typename T, typename TFFT>
 void CFFT<loglen, TW, T, TFFT>::ReorderRealSamplesInPlace(TFFT in[])
 {
-	size_t length = 1 << (loglen - 1);
+	static const size_t length = 1 << (loglen - 1);
 	for (size_t i = 0; i < length; i++)
 	{
 		size_t reordered = bitreversal<loglen - 1>(i);
@@ -148,7 +148,7 @@ void CFFT<loglen, TW, T, TFFT>::ReorderRealSamplesInPlace(TFFT in[])
 template <size_t loglen, typename TW, typename T, typename TFFT>
 TW CFFT<loglen, TW, T, TFFT>::GetCosFactor(size_t stage, size_t stageshift)
 {
-	const size_t len = 1 << loglen;
+	static const size_t len = 1 << loglen;
 	//more than .5 is not possible
 	//size_t k = len*stage/stagesize;
 	size_t k = (len * stage) >> stageshift;
@@ -158,10 +158,10 @@ TW CFFT<loglen, TW, T, TFFT>::GetCosFactor(size_t stage, size_t stageshift)
 template <size_t loglen, typename TW, typename T, typename TFFT>
 TW CFFT<loglen, TW, T, TFFT>::GetSinFactor(size_t stage, size_t stageshift)
 {
-	const size_t len = 1 << loglen;
+	static const size_t len = 1 << loglen;
 	//const size_t len2        = 1<<(loglen-1);
-	const size_t len4 = 1 << (loglen - 2);
-	const size_t mask = ~(((-1) >> (loglen)) << (loglen - 1));
+	static const size_t len4 = 1 << (loglen - 2);
+	static const size_t mask = ~(((-1) >> (loglen)) << (loglen - 1));
 	//more than .5 is not possible
 	//size_t k = (len*stage/stagesize+(len>>2))&mask;
 	size_t k = (((len * stage) >> stageshift) + (len >> 2)) & mask;
@@ -175,8 +175,8 @@ void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[])
 	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
 	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
 
-	size_t ldlen = loglen;
-	size_t length = 1 << loglen;
+	static const size_t ldlen = loglen;
+	static const size_t length = 1 << loglen;
 	ReorderSamples(buffer, ffttransform);
 
 	for (size_t i = 0; i < ldlen; i++)
@@ -224,8 +224,8 @@ void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[]
 	static const size_t bitcorrection = sizeof(reinterpret_cast<TFFT*>(0)->re) * 8 - 1;
 	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
 	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
-	size_t ldlen = loglen;
-	size_t length = 1 << loglen;
+	static const size_t ldlen = loglen;
+	static const size_t length = 1 << loglen;
 	ReorderSamples(buffer, ffttransform);
 
 	for (size_t i = 0; i < ldlen; i++)
@@ -249,7 +249,7 @@ void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[]
 				TFFT temp_a = ffttransform[butterflyix + R];
 				TFFT temp_b = ffttransform[butterflyix + R + stagesize2];//load individual stages
 				
-				static const size_t req_downshifts = (sizeof(TFFT::OFWTYPE) - sizeof(T)) * 8u;
+				static const size_t req_downshifts = (sizeof(TFFT::OFWTYPE) - sizeof(T)) * 8u - 1u;//scaling does not apply
 #ifdef _C1x_
 				auto dummy = weight * temp_b;
 				auto temp_a_scaled = temp_a << bitcorrection;
@@ -273,8 +273,8 @@ void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[], EN
 	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
 	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
 
-	size_t ldlen = loglen;
-	size_t length = 1 << loglen;
+	static const size_t ldlen = loglen;
+	static const size_t length = 1 << loglen;
 	size_t Exponent = 0;
 	*pBlockExponent = loglen;
 	ReorderSamples(buffer, ffttransform);
@@ -374,8 +374,8 @@ void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[]
 	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
 	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
 
-	size_t ldlen = loglen;
-	size_t length = 1 << loglen;
+	static const size_t ldlen = loglen;
+	static const size_t length = 1 << loglen;
 	size_t Exponent = 0;
 	*pBlockExponent = loglen;
 	ReorderSamples(buffer, ffttransform);
@@ -475,8 +475,8 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[]
 	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
 	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
 
-	size_t ldlen = loglen - 1;
-	size_t length = 1 << (loglen - 1);
+	static const size_t ldlen = loglen - 1;
+	static const size_t length = 1 << (loglen - 1);
 	ReorderRealSamples(buffer, ffttransform);
 
 	for (size_t i = 0; i < ldlen; i++)
@@ -526,8 +526,8 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
 	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
 
-	size_t ldlen = loglen - 1;
-	size_t length = 1 << (loglen - 1);
+	static const size_t ldlen = loglen - 1;
+	static const size_t length = 1 << (loglen - 1);
 
 	memcpy(ffttransform, buffer, length * sizeof(TFFT));
 	Convert2ComplexDFT(ffttransform);
@@ -556,7 +556,7 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 				TFFT temp_a = ffttransform[butterflyix + R];
 				TFFT temp_b = ffttransform[butterflyix + R + stagesize2];//load individual stages
 				
-				static const size_t req_downshifts = (sizeof(TFFT::OFWTYPE) - sizeof(T)) * 8u;
+				static const size_t req_downshifts = (sizeof(TFFT::OFWTYPE) - sizeof(T)) * 8u - 1u;
 
 #ifdef _C1x_
 				auto dummy = weight * temp_b;
@@ -581,8 +581,8 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[]
 	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
 	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
 
-	size_t ldlen = loglen - 1;
-	size_t length = 1 << (loglen - 1);
+	static const size_t ldlen = loglen - 1;
+	static const size_t length = 1 << (loglen - 1);
 	size_t Exponent = 0;
 	*pBlockExponent = loglen;
 	ReorderRealSamples(buffer, ffttransform);
@@ -682,8 +682,8 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
 	static const size_t wscaling_imag = (sizeof(reinterpret_cast<TFFT*>(0)->im) - sizeof(TW)) * 8;
 
-	size_t ldlen = loglen - 1;
-	size_t length = 1 << (loglen - 1);
+	static const size_t ldlen = loglen - 1;
+	static const size_t length = 1 << (loglen - 1);
 	size_t Exponent = 0;
 	*pBlockExponent = loglen;
 
@@ -824,9 +824,9 @@ void CFFT<loglen, TW, T, TFFT>::Convert2HalfDFT(TFFT transform[])
 {
 	static const float PI = 3.1415926535897932384626434f;
 
-	size_t length = 1 << (loglen - 1);
-	size_t redlength = length;
-	size_t halflength = length >> 1;
+	static const size_t length = 1 << (loglen - 1);
+	static const size_t redlength = length;
+	static const size_t halflength = length >> 1;
 	for (size_t i = 1; i < halflength; i++)
 	{
 		//here the FB case
@@ -884,9 +884,9 @@ void CFFT<loglen, TW, T, TFFT>::Convert2ComplexDFT(TFFT transform[])
 	static const float PI2 = 6.2831853071795864769252868f;
 	static const float PI = 3.1415926535897932384626434f;
 
-	size_t length = 1 << (loglen - 1);
-	size_t redlength = length;
-	size_t halflength = length >> 1;
+	static const size_t length = 1 << (loglen - 1);
+	static const size_t redlength = length;
+	static const size_t halflength = length >> 1;
 	for (size_t i = 1; i < halflength; i++)
 	{
 		//here the FB case
@@ -959,9 +959,9 @@ void CFFT<loglen, TW, T, TFFT>::Convert2ComplexDFT(TFFT transform[], size_t expo
 	static const float PI2 = 6.2831853071795864769252868f;
 	static const float PI = 3.1415926535897932384626434f;
 
-	size_t length = 1 << (loglen - 1);
-	size_t redlength = length;
-	size_t halflength = length >> 1;
+	static const size_t length = 1 << (loglen - 1);
+	static const size_t redlength = length;
+	static const size_t halflength = length >> 1;
 	for (size_t i = 1; i < halflength; i++)
 	{
 		//here the FB case
@@ -1043,9 +1043,9 @@ void CFFT<loglen, TW, T, TFFT>::Convert2HalfDFT(TFFT transform[], size_t exponen
 {
 	static const float PI = 3.1415926535897932384626434f;
 
-	size_t length = 1 << (loglen - 1);
-	size_t redlength = length;
-	size_t halflength = length >> 1;
+	static const size_t length = 1 << (loglen - 1);
+	static const size_t redlength = length;
+	static const size_t halflength = length >> 1;
 	for (size_t i = 1; i < halflength; i++)
 	{
 		//here the FB case
@@ -1132,11 +1132,11 @@ private:
 
 	template <size_t bitsize> size_t swap(size_t pointer)
 	{
-		const size_t size = bitsize >> 1;//for an example for 11 size is 5
-		const size_t lowermask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> size) << size);
-		const size_t uppermask = lowermask << (bitsize - size);
-		const size_t mask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> bitsize) << bitsize);
-		const size_t remaining = (~(lowermask | uppermask)) & mask;
+		static const size_t size = bitsize >> 1;//for an example for 11 size is 5
+		static const size_t lowermask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> size) << size);
+		static const size_t uppermask = lowermask << (bitsize - size);
+		static const size_t mask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> bitsize) << bitsize);
+		static const size_t remaining = (~(lowermask | uppermask)) & mask;
 		pointer = (swap<size>(lowermask & pointer) << (bitsize - size)) | swap<size>((uppermask & pointer) >> (bitsize - size)) | (remaining & pointer);
 		return pointer;
 	}
@@ -1186,7 +1186,7 @@ void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::CreateTwiddleFactor
 {
 	static const float PI2 = 6.283185307179586476925286f;
 
-	size_t len = 1 << loglen;
+	static const size_t len = 1 << loglen;
 	if (2 * length >= len)
 	{
 		const size_t len2 = len >> 1;
@@ -1201,7 +1201,7 @@ void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::CreateTwiddleFactor
 template <size_t loglen>
 void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::ReorderSamples(float in[], FFT_INTERNALS::f32_complex data[])
 {
-	size_t length = 1 << loglen;
+	static const size_t length = 1 << loglen;
 	for (size_t i = 0; i < length; i++)
 	{
 		size_t reordered = bitreversal<loglen>(i);
@@ -1213,7 +1213,7 @@ void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::ReorderSamples(floa
 template <size_t loglen>
 void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::ReorderSamples(FFT_INTERNALS::f32_complex in[], FFT_INTERNALS::f32_complex data[])
 {
-	size_t length = 1 << loglen;
+	static const size_t length = 1 << loglen;
 	for (size_t i = 0; i < length; i++)
 	{
 		size_t reordered = bitreversal<loglen>(i);
@@ -1225,7 +1225,7 @@ void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::ReorderSamples(FFT_
 template <size_t loglen>
 void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::ReorderRealSamples(float in[], FFT_INTERNALS::f32_complex data[])
 {
-	size_t length = 1 << (loglen - 1);
+	static const size_t length = 1 << (loglen - 1);
 	for (size_t i = 0; i < length; i++)
 	{
 		size_t reordered = bitreversal<loglen - 1>(i);
@@ -1237,7 +1237,7 @@ void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::ReorderRealSamples(
 template <size_t loglen>
 void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::ReorderRealSamplesInPlace(FFT_INTERNALS::f32_complex in[])
 {
-	size_t length = 1 << (loglen - 1);
+	static const size_t length = 1 << (loglen - 1);
 	for (size_t i = 0; i < length; i++)
 	{
 		size_t reordered = bitreversal<loglen - 1>(i);
@@ -1255,7 +1255,7 @@ void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::ReorderRealSamplesI
 template <size_t loglen>
 float CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::GetCosFactor(size_t stage, size_t stageshift)
 {
-	const size_t len = 1 << loglen;
+	static const size_t len = 1 << loglen;
 	//more than .5 is not possible
 	//size_t k = len*stage/stagesize;
 	size_t k = (len * stage) >> stageshift;
@@ -1265,10 +1265,10 @@ float CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::GetCosFactor(size_
 template <size_t loglen>
 float CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::GetSinFactor(size_t stage, size_t stageshift)
 {
-	const size_t len = 1 << loglen;
+	static const size_t len = 1 << loglen;
 	//const size_t len2        = 1<<(loglen-1);
-	const size_t len4 = 1 << (loglen - 2);
-	const size_t mask = ~(((-1) >> (loglen)) << (loglen - 1));
+	static const size_t len4 = 1 << (loglen - 2);
+	static const size_t mask = ~(((-1) >> (loglen)) << (loglen - 1));
 	//more than .5 is not possible
 	//size_t k = (len*stage/stagesize+(len>>2))&mask;
 	size_t k = (((len * stage) >> stageshift) + (len >> 2)) & mask;
@@ -1280,8 +1280,8 @@ template <size_t loglen>
 void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::CalculateFFT(float buffer[], FFT_INTERNALS::f32_complex ffttransform[])
 {
 	static const float PI2 = 6.2831853071795864769252868f;
-	size_t ldlen = loglen;
-	size_t length = 1 << loglen;
+	static const size_t ldlen = loglen;
+	static const size_t length = 1 << loglen;
 	ReorderSamples(buffer, ffttransform);
 
 	for (size_t i = 0; i < ldlen; i++)
@@ -1346,8 +1346,8 @@ template <size_t loglen>
 void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::CalculateIFFT(FFT_INTERNALS::f32_complex buffer[], FFT_INTERNALS::f32_complex ffttransform[])
 {
 	static const float PI2 = 6.2831853071795864769252868f;
-	size_t ldlen = loglen;
-	size_t length = 1 << loglen;
+	static const size_t ldlen = loglen;
+	static const size_t length = 1 << loglen;
 	ReorderSamples(buffer, ffttransform);
 
 	for (size_t i = 0; i < ldlen; i++)
@@ -1418,8 +1418,8 @@ void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::CalculateIFFT(FFT_I
 template <size_t loglen>
 void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::CalculateRealFFT(float buffer[], FFT_INTERNALS::f32_complex ffttransform[])
 {
-	size_t ldlen = loglen - 1;
-	size_t length = 1 << (loglen - 1);
+	static const size_t ldlen = loglen - 1;
+	static const size_t length = 1 << (loglen - 1);
 	ReorderRealSamples(buffer, ffttransform);
 
 	for (size_t i = 0; i < ldlen; i++)
@@ -1466,8 +1466,8 @@ template <size_t loglen>
 void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::CalculateRealIFFT(FFT_INTERNALS::f32_complex buffer[], FFT_INTERNALS::f32_complex ffttransform[])
 {
 	static const float PI2 = 6.2831853071795864769252868f;
-	size_t ldlen = loglen - 1;
-	size_t length = 1 << (loglen - 1);
+	static const size_t ldlen = loglen - 1;
+	static const size_t length = 1 << (loglen - 1);
 	memcpy(ffttransform, buffer, length * sizeof(FFT_INTERNALS::f32_complex));
 	Convert2ComplexDFT(ffttransform);
 	ReorderRealSamplesInPlace(ffttransform);
@@ -1726,11 +1726,11 @@ private:
 
 	template <size_t bitsize> size_t swap(size_t pointer)
 	{
-		const size_t size = bitsize >> 1;//for an example for 11 size is 5
-		const size_t lowermask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> size) << size);
-		const size_t uppermask = lowermask << (bitsize - size);
-		const size_t mask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> bitsize) << bitsize);
-		const size_t remaining = (~(lowermask | uppermask)) & mask;
+		static const size_t size = bitsize >> 1;//for an example for 11 size is 5
+		static const size_t lowermask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> size) << size);
+		static const size_t uppermask = lowermask << (bitsize - size);
+		static const size_t mask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> bitsize) << bitsize);
+		static const size_t remaining = (~(lowermask | uppermask)) & mask;
 		pointer = (swap<size>(lowermask & pointer) << (bitsize - size)) | swap<size>((uppermask & pointer) >> (bitsize - size)) | (remaining & pointer);
 		return pointer;
 	}
@@ -1747,11 +1747,11 @@ private:
 
 	template <size_t bitsize> size_t bitreversal(size_t pointer)
 	{
-		const size_t size = (bitsize) >> 1;//for an example for 11 size is 5
-		const size_t lowermask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> size) << size);
-		const size_t uppermask = lowermask << (bitsize - size);
-		const size_t mask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> (bitsize)) << (bitsize));
-		const size_t remaining = (~(lowermask | uppermask)) & mask;
+		static const size_t size = (bitsize) >> 1;//for an example for 11 size is 5
+		static const size_t lowermask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> size) << size);
+		static const size_t uppermask = lowermask << (bitsize - size);
+		static const size_t mask = ~(static_cast<size_t>(static_cast<size_t>(-1) >> (bitsize)) << (bitsize));
+		static const size_t remaining = (~(lowermask | uppermask)) & mask;
 		pointer = (swap<size>(lowermask & pointer) << (bitsize - size)) | swap<size>((uppermask & pointer) >> (bitsize - size)) | (remaining & pointer);
 		return pointer;
 	}
@@ -1783,7 +1783,7 @@ void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::CreateTwiddleFact
 {
 	static const double PI2 = 6.283185307179586476925286f;
 
-	size_t len = 1 << loglen;
+	static const size_t len = 1 << loglen;
 	if (2 * length >= len)
 	{
 		const size_t len2 = len >> 1;
@@ -1798,7 +1798,7 @@ void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::CreateTwiddleFact
 template <size_t loglen>
 void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::ReorderSamples(double in[], FFT_INTERNALS::f64_complex data[])
 {
-	size_t length = 1 << loglen;
+	static const size_t length = 1 << loglen;
 	for (size_t i = 0; i < length; i++)
 	{
 		size_t reordered = bitreversal<loglen>(i);
@@ -1810,7 +1810,7 @@ void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::ReorderSamples(do
 template <size_t loglen>
 void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::ReorderSamples(FFT_INTERNALS::f64_complex in[], FFT_INTERNALS::f64_complex data[])
 {
-	size_t length = 1 << loglen;
+	static const size_t length = 1 << loglen;
 	for (size_t i = 0; i < length; i++)
 	{
 		size_t reordered = bitreversal<loglen>(i);
@@ -1822,7 +1822,7 @@ void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::ReorderSamples(FF
 template <size_t loglen>
 void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::ReorderRealSamples(double in[], FFT_INTERNALS::f64_complex data[])
 {
-	size_t length = 1 << (loglen - 1);
+	static const size_t length = 1 << (loglen - 1);
 	for (size_t i = 0; i < length; i++)
 	{
 		size_t reordered = bitreversal<loglen - 1>(i);
@@ -1834,7 +1834,7 @@ void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::ReorderRealSample
 template <size_t loglen>
 void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::ReorderRealSamplesInPlace(FFT_INTERNALS::f64_complex in[])
 {
-	size_t length = 1 << (loglen - 1);
+	static const size_t length = 1 << (loglen - 1);
 	for (size_t i = 0; i < length; i++)
 	{
 		size_t reordered = bitreversal<loglen - 1>(i);
@@ -1852,7 +1852,7 @@ void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::ReorderRealSample
 template <size_t loglen>
 double CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::GetCosFactor(size_t stage, size_t stageshift)
 {
-	const size_t len = 1 << loglen;
+	static const size_t len = 1 << loglen;
 	//more than .5 is not possible
 	//size_t k = len*stage/stagesize;
 	size_t k = (len * stage) >> stageshift;
@@ -1862,10 +1862,10 @@ double CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::GetCosFactor(si
 template <size_t loglen>
 double CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::GetSinFactor(size_t stage, size_t stageshift)
 {
-	const size_t len = 1 << loglen;
-	//const size_t len2        = 1<<(loglen-1);
-	const size_t len4 = 1 << (loglen - 2);
-	const size_t mask = ~(((-1) >> (loglen)) << (loglen - 1));
+	static const size_t len = 1 << loglen;
+	//static const size_t len2        = 1<<(loglen-1);
+	static const size_t len4 = 1 << (loglen - 2);
+	static const size_t mask = ~(((-1) >> (loglen)) << (loglen - 1));
 	//more than .5 is not possible
 	//size_t k = (len*stage/stagesize+(len>>2))&mask;
 	size_t k = (((len * stage) >> stageshift) + (len >> 2)) & mask;
@@ -1877,8 +1877,8 @@ template <size_t loglen>
 void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::CalculateFFT(double buffer[], FFT_INTERNALS::f64_complex ffttransform[])
 {
 	static const double PI2 = 6.2831853071795864769252868;
-	size_t ldlen = loglen;
-	size_t length = 1 << loglen;
+	static const size_t ldlen = loglen;
+	static const size_t length = 1 << loglen;
 	ReorderSamples(buffer, ffttransform);
 
 	for (size_t i = 0; i < ldlen; i++)
@@ -1942,8 +1942,8 @@ template <size_t loglen>
 void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::CalculateIFFT(FFT_INTERNALS::f64_complex buffer[], FFT_INTERNALS::f64_complex ffttransform[])
 {
 	static const double PI2 = 6.2831853071795864769252868;
-	size_t ldlen = loglen;
-	size_t length = 1 << loglen;
+	static const size_t ldlen = loglen;
+	static const size_t length = 1 << loglen;
 	ReorderSamples(buffer, ffttransform);
 
 	for (size_t i = 0; i < ldlen; i++)
@@ -2013,8 +2013,8 @@ template <size_t loglen>
 void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::CalculateRealIFFT(FFT_INTERNALS::f64_complex buffer[], FFT_INTERNALS::f64_complex ffttransform[])
 {
 	static const double PI2 = 6.2831853071795864769252868;
-	size_t ldlen = loglen - 1;
-	size_t length = 1 << (loglen - 1);
+	static const size_t ldlen = loglen - 1;
+	static const size_t length = 1 << (loglen - 1);
 	memcpy(ffttransform, buffer, length * sizeof(FFT_INTERNALS::f64_complex));
 	Convert2ComplexDFT(ffttransform);
 	ReorderRealSamplesInPlace(ffttransform);
