@@ -4,7 +4,7 @@
 #include "fft_internals.h"
 
 #define _USETWIDDLE_
-//#define _RECURRENCE_
+#define _RECURRENCE_
 #define _C1x_
 
 enum class EN_ScalingMethod { SCALE_INPUT, SCALE_OUTPUT, SCALEINPOUT };
@@ -80,7 +80,7 @@ public:
 template<size_t loglen, typename TW, typename T, typename TFFT>
 void CFFT<loglen, TW, T, TFFT>::CreateTwiddleFactors(size_t length, TW twiddlefactors[], double scaling)
 {
-	static const double PI2 = 6.283185307179586476925286f;
+	static const double PI2 = 6.283185307179586476925286;
 
 	static const size_t len = 1 << loglen;
 	if (2 * length >= len)
@@ -1757,7 +1757,7 @@ public:
 template<size_t loglen>
 void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::CreateTwiddleFactors(size_t length, double twiddlefactors[])
 {
-	static const double PI2 = 6.283185307179586476925286f;
+	static const double PI2 = 6.283185307179586476925286;
 
 	static const size_t len = 1 << loglen;
 	if (2 * length >= len)
