@@ -51,6 +51,7 @@ void plot(std::vector<T> signal)
     gp << "set grid xtics lt 0 lw 1 lc 'gray'\n" <<
         "set grid ytics lt 0 lw 2 lc 'gray'" << std::endl;
     gp << "replot;" << std::endl;
+    gp << "pause mouse close;" << std::endl;
 }
 
 template <typename T>
@@ -106,4 +107,5 @@ void plot(std::vector<T> signal1, std::vector<T> signal2)
     gp << "set grid xtics lt 0 lw 1 lc 'gray'\n" <<
         "set grid ytics lt 0 lw 2 lc 'gray'" << std::endl;
     gp << "replot;" << std::endl;
+    gp << "pause mouse close;" << std::endl;
 }

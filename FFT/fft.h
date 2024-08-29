@@ -3,9 +3,9 @@
 
 #include "fft_internals.h"
 
-//#define _USETWIDDLE_
-#define _RECURRENCE_
-//#define _C1x_
+#define _USETWIDDLE_
+//#define _RECURRENCE_
+#define _C1x_
 
 enum class EN_ScalingMethod { SCALE_INPUT, SCALE_OUTPUT, SCALEINPOUT };
 
@@ -561,7 +561,7 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 #ifdef _C1x_
 				auto dummy = weight * temp_b;
 				auto temp_a_scaled = temp_a << bitcorrection;
-				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> );
+				ffttransform[butterflyix + R] = static_cast<TFFT>((temp_a_scaled + dummy) >> req_downshifts);
 				ffttransform[butterflyix + R + stagesize2] = static_cast<TFFT>((temp_a_scaled - dummy) >> req_downshifts);
 #else
 				typename TFFT::ACCTYPE dummy = weight * temp_b;
@@ -605,13 +605,6 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealFFT(T buffer[], TFFT ffttransform[]
 			mask = (~mask) << (sizeof(T) * 8 - 2);
 			for (Exponent = 0; !(MaxVal & mask); MaxVal <<= 1) { Exponent++; }
 			Exponent += (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(T)) * 8;
-
-			//scale to the max is done in the butterfly
-			/*for (size_t i=0;i<length;i++)
-			{
-				ffttransform[i].re <<= Exponent;
-			}
-			*pBlockExponent = Exponent;*/
 		}
 	}
 
@@ -689,7 +682,6 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 
 	memcpy(ffttransform, buffer, length * sizeof(TFFT));
 
-
 	if ((rescale == EN_ScalingMethod::SCALE_INPUT) || (rescale == EN_ScalingMethod::SCALEINPOUT))
 	{
 		typename TFFT::DATATYPE MaxVal1 = abs(ffttransform[0].re);
@@ -711,14 +703,6 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 			typename TFFT::DATATYPE mask = 0;
 			mask = (~mask) << (sizeof(T) * 8 - 2);
 			for (Exponent = 0; !(MaxVal & mask); MaxVal <<= 1) { Exponent++; }
-			//Exponent				+= (sizeof(reinterpret_cast<TFFT*>(0)->re)-sizeof(T))*8;
-
-			//scale to the max is done in the butterfly
-			/*for (size_t i=0;i<length;i++)
-			{
-				ffttransform[i].re <<= Exponent;
-			}
-			*pBlockExponent = Exponent;*/
 		}
 	}
 	Convert2ComplexDFT(ffttransform, Exponent);
@@ -746,14 +730,6 @@ void CFFT<loglen, TW, T, TFFT>::CalculateRealIFFT(TFFT buffer[], TFFT ffttransfo
 			typename TFFT::DATATYPE mask = 0;
 			mask = (~mask) << (sizeof(T) * 8 - 2);
 			for (Exponent = 0; !(MaxVal & mask); MaxVal <<= 1) { Exponent++; }
-			//Exponent				+= (sizeof(reinterpret_cast<TFFT*>(0)->re)-sizeof(T))*8;
-
-			//scale to the max is done in the butterfly
-			/*for (size_t i=0;i<length;i++)
-			{
-			ffttransform[i].re <<= Exponent;
-			}
-			*pBlockExponent = Exponent;*/
 		}
 	}
 	else
