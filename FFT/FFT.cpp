@@ -396,7 +396,7 @@ TEST(sample_test_case, int32_cos_sin_real)
 	m_FFT.CalculateRealIFFT(spectrum.data(), reinterpret_cast<FFT_INTERNALS::i32_complex*>(transformed_signal.data()));
 	for (size_t i = 0; i < 1024; ++i)
 	{
-		//ASSERT_NEAR(i16Signal[i], i16ftSignal[i], 30);
+		ASSERT_NEAR(ref_signal[i], 2* transformed_signal[i], 2048);
 	}
 
 	for (size_t i = 0; i < 512; ++i)
