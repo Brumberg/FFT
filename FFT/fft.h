@@ -1078,21 +1078,21 @@ void CFFT<loglen, TW, T, TFFT>::Convert2HalfDFT(TFFT transform[], size_t exponen
 	{
 		lval = ((static_cast<typename TFFT::OFWTYPE>(transform[0].re) + transform[0].im)) << (exponent - 1);
 		hval = ((static_cast<typename TFFT::OFWTYPE>(transform[0].re) - transform[0].im)) << (exponent - 1);
-		midr = transform[halflength].re << (exponent - 1);
-		midi = transform[halflength].im << (exponent - 1);
+		midr = static_cast<typename TFFT::OFWTYPE>(transform[halflength].re) << (exponent - 1);
+		midi = static_cast<typename TFFT::OFWTYPE>(transform[halflength].im) << (exponent - 1);
 	}
 	else
 	{
 		lval = ((static_cast<typename TFFT::OFWTYPE>(transform[0].re) + transform[0].im)) >> 1;
 		hval = ((static_cast<typename TFFT::OFWTYPE>(transform[0].re) - transform[0].im)) >> 1;
-		midr = transform[halflength].re >> 1;
-		midi = transform[halflength].im >> 1;
+		midr = static_cast<typename TFFT::OFWTYPE>(transform[halflength].re) >> 1;
+		midi = static_cast<typename TFFT::OFWTYPE>(transform[halflength].im) >> 1;
 	}
 
 	transform[0].re = static_cast<typename TFFT::DATATYPE>(lval);//>>1 moved to exponent above
 	transform[0].im = static_cast<typename TFFT::DATATYPE>(hval);//>>1 moved to exponent above
-	transform[halflength].re = midr;//treatment of the half index
-	transform[halflength].im = -midi;//treatment of the half index
+	transform[halflength].re = static_cast<typename TFFT::DATATYPE>(midr);//treatment of the half index
+	transform[halflength].im = -static_cast<typename TFFT::DATATYPE>(midi);//treatment of the half index
 }
 
 /**

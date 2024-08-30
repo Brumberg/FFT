@@ -707,6 +707,109 @@ TEST(sample_test_case, int16_cos_sin_mixed_freq_midrange_check)
 #endif
 }
 
+TEST(sample_test_case, int32_DC_test)
+{
+	CFFT<10, int, int, FFT_INTERNALS::i32_complex> m_FFT(2147483647);
+
+	static CDSPArray<FFT_INTERNALS::i32_complex, 512> spectrum;
+	static CDSPArray<int, 1024> ref_signal;
+	static CDSPArray<int, 1024> transformed_signal;
+	for (size_t i = 0; i < 1024; i++)
+	{
+		const double v = 65536 * 16384;
+		ref_signal.push_back(static_cast<int>(v));
+	}
+	spectrum.resize(512);
+	transformed_signal.resize(1024);
+	m_FFT.CalculateRealFFT(ref_signal.data(), spectrum.data());
+	m_FFT.CalculateRealIFFT(spectrum.data(), reinterpret_cast<FFT_INTERNALS::i32_complex*>(transformed_signal.data()));
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		ASSERT_NEAR(ref_signal[i], 2 * transformed_signal[i], 2048);
+	}
+
+	for (size_t i = 0; i < 512; ++i)
+	{
+		if (i == 0)
+		{
+			ASSERT_NEAR(spectrum[i].re, 65536 * 16384, 256);
+			ASSERT_NEAR(spectrum[i].im, 0, 256);
+		}
+		else
+		{
+			ASSERT_NEAR(spectrum[i].re, 0, 32);
+			ASSERT_NEAR(spectrum[i].im, 0, 32);
+		}
+	}
+#if 0	
+	std::vector<double> signal_ref;
+	std::vector<double> signal_transformed;
+	for (size_t i = 0; i < 30; ++i)
+	{
+		signal_ref.push_back(ref_signal[i]);
+	}
+	for (size_t i = 0; i < 30; ++i)
+	{
+		signal_transformed.push_back(2 * transformed_signal[i]);
+	}
+	plot<double>(signal_ref, signal_transformed);
+#endif
+}
+
+TEST(sample_test_case, int32_DC_test_with_scaling)
+{
+	CFFT<10, int, int, FFT_INTERNALS::i32_complex> m_FFT(2147483647);
+
+	static CDSPArray<FFT_INTERNALS::i32_complex, 512> spectrum;
+	static CDSPArray<int, 1024> ref_signal;
+	static CDSPArray<int, 1024> transformed_signal;
+	for (size_t i = 0; i < 1024; i++)
+	{
+		const double v = 65536 * 16384;
+		ref_signal.push_back(static_cast<int>(v));
+	}
+	spectrum.resize(512);
+	transformed_signal.resize(1024);
+	m_FFT.CalculateRealFFT(ref_signal.data(), spectrum.data());
+	m_FFT.CalculateRealIFFT(spectrum.data(), reinterpret_cast<FFT_INTERNALS::i32_complex*>(transformed_signal.data()));
+	size_t fft_scaling;
+	m_FFT.CalculateRealFFT(ref_signal.data(), spectrum.data(), EN_ScalingMethod::SCALEINPOUT, &fft_scaling);
+	size_t ifft_scaling;
+	m_FFT.CalculateRealIFFT(spectrum.data(), reinterpret_cast<FFT_INTERNALS::i32_complex*>(transformed_signal.data()), EN_ScalingMethod::SCALEINPOUT, &ifft_scaling);
+	DoScaling<10>(fft_scaling, ifft_scaling, transformed_signal);
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		ASSERT_NEAR(ref_signal[i], transformed_signal[i], 2048);
+	}
+	
+	for (size_t i = 0; i < 512; ++i)
+	{
+		if (i == 0)
+		{
+			ASSERT_NEAR(spectrum[i].re, ((65536 * 16384 - 1)) << (10 - fft_scaling), 256);
+			ASSERT_NEAR(spectrum[i].im, 0, 256);
+		}
+		else
+		{
+			ASSERT_NEAR(spectrum[i].re, 0, 32);
+			ASSERT_NEAR(spectrum[i].im, 0, 32);
+		}
+	}
+#if 0	
+	std::vector<double> signal_ref;
+	std::vector<double> signal_transformed;
+	for (size_t i = 0; i < 30; ++i)
+	{
+		signal_ref.push_back(ref_signal[i]);
+	}
+	for (size_t i = 0; i < 30; ++i)
+	{
+		signal_transformed.push_back(2 * transformed_signal[i]);
+	}
+	plot<double>(signal_ref, signal_transformed);
+#endif
+	}
+
 TEST(sample_test_case, int32_cos_sin_real)
 {
 	CFFT<10, int, int, FFT_INTERNALS::i32_complex> m_FFT(2147483647);
