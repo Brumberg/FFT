@@ -404,17 +404,17 @@ TEST(sample_test_case, int16_cos_sin_scaling)
 
 	for (size_t i = 0; i < 1024; ++i)
 	{
-		signal_ref.push_back(i16Signal[i]);
+		signal_ref.push_back(ref_signal[i]);
 	}
 	for (size_t i = 0; i < 1024; ++i)
 	{
-		signal_transformed.push_back(i16ftSignal[i]);
+		signal_transformed.push_back(transformed_signal[i]);
 	}
 	plot<double>(signal_ref, signal_transformed);
 
 	for (size_t i = 0; i < 1024; ++i)
 	{
-		signal_diff.push_back(signal_ref[i] - i16ftSignal[i]);
+		signal_diff.push_back(ref_signal[i] - transformed_signal[i]);
 	}
 	plot<double>(signal_diff);
 #endif
