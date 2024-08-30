@@ -1012,6 +1012,7 @@ void CFFT<loglen, TW, T, TFFT>::Convert2ComplexDFT(TFFT transform[], size_t expo
 	//transform[0].im				= 0.5f*hval;
 	transform[0].re = static_cast<typename TFFT::DATATYPE>(lval);
 	transform[0].im = static_cast<typename TFFT::DATATYPE>(hval);//>>1 moved to exponent stuff ^
+	transform[halflength].re = (transform[halflength].re << exponent);//treatment of the half index
 	transform[halflength].im = -(transform[halflength].im << exponent);//treatment of the half index
 }
 
