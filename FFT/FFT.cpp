@@ -40,6 +40,27 @@ void CalculateDFT(size_t length, CType* buffer, CType* result)
 	}
 }
 
+template <typename CType>
+void CalculateIDFT(size_t length, CType* buffer, CType* result)
+{
+	static const double PI2 = 6.2831853071795864769252868;
+	for (size_t i = 0; i < length; i++)
+	{
+		FFT_INTERNALS::f64_complex accu;
+		accu.re = 0;
+		accu.im = 0;
+		for (size_t j = 0; j < length; j++)
+		{
+			double cosine = cos((PI2 * j * i) / length);
+			double sine = sin((PI2 * j * i) / length);
+			accu.re += buffer[j].re * cosine + buffer[j].im * sine;
+			accu.im += buffer[j].im * cosine + buffer[j].re * sine;
+		}
+		result[i].re = static_cast<decltype(CType::re)>(accu.re);
+		result[i].im = static_cast<decltype(CType::im)>(accu.im);
+	}
+}
+
 template <typename T, size_t N>
 void GenerateSignalPairHannSym(CDSPArray<T, N>& up, CDSPArray<T, N>& dn,
 	double SamplingFrequency, double BurstFrequency,
@@ -261,6 +282,186 @@ TEST(float32_fft, realfft_impulse_response)
 #endif
 }
 
+TEST(float32_fft, complexfft_impulse_response)
+{
+	CFFT<10, float, float, FFT_INTERNALS::f32_complex> mf_FFT;
+
+	static CDSPArray<FFT_INTERNALS::f32_complex, 1024> spectrum;
+	static CDSPArray<float, 1024> ref_signal;
+	static CDSPArray<FFT_INTERNALS::f32_complex, 1024> transformed_signal;
+	for (size_t i = 0; i < 1024; i++)
+	{
+		ref_signal.push_back(0);
+	}
+	ref_signal[0] = -32768 * 65536;
+	spectrum.resize(1024);
+	transformed_signal.resize(1024);
+	mf_FFT.CalculateFFT(reinterpret_cast<float*>(ref_signal.data()), spectrum.data());
+	mf_FFT.CalculateIFFT(spectrum.data(), reinterpret_cast<FFT_INTERNALS::f32_complex*>(transformed_signal.data()));
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		ASSERT_NEAR(ref_signal[i], transformed_signal[i].re, 50);
+		ASSERT_NEAR(0, transformed_signal[i].im, 470);
+	}
+
+	for (size_t i = 0; i < 512; ++i)
+	{
+		ASSERT_NEAR(spectrum[i].re, -32768 * 65536, 40);
+		ASSERT_NEAR(spectrum[i].im, 0, 40);
+	}
+
+#if 0	
+	std::vector<double> signal_ref;
+	std::vector<double> signal_transformed;
+	std::vector<double> signal_diff;
+	std::vector<double> signal_transformed_c;
+	std::vector<double> signal_diff_c;
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_ref.push_back(ref_signal[i]);
+	}
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_transformed.push_back(transformed_signal[i].re);
+	}
+	plot<double>(signal_ref, signal_transformed);
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_diff.push_back(signal_ref[i] - signal_transformed[i]);
+	}
+	plot<double>(signal_diff);
+
+	static CDSPArray<FFT_INTERNALS::f32_complex, 1024> ref_signal_c;
+	static CDSPArray<FFT_INTERNALS::f32_complex, 1024> ref_spectrum_c;
+	static CDSPArray<FFT_INTERNALS::f32_complex, 1024> transformedsignal_c;
+	ref_spectrum_c.resize(1024);
+	transformedsignal_c.resize(1024);
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		FFT_INTERNALS::f32_complex temp;
+		temp.re = ref_signal[i];
+		temp.im = 0;
+		ref_signal_c.push_back(temp);
+	}
+	CalculateDFT(1024, ref_signal_c.data(), ref_spectrum_c.data());
+	CalculateIDFT(1024, ref_spectrum_c.data(), transformedsignal_c.data());
+	for (const auto& i : transformedsignal_c)
+	{
+		signal_transformed_c.push_back(i.re / 1024);
+	}
+	plot<double>(signal_ref, signal_transformed_c);
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_diff.push_back(signal_ref[i] - signal_transformed[i]);
+	}
+	plot<double>(signal_diff);
+#endif
+}
+
+TEST(float32_fft, complexfft_three_component_fft)
+{
+	CFFT<10, float, float, FFT_INTERNALS::f32_complex> mf_FFT;
+
+	static CDSPArray<FFT_INTERNALS::f32_complex, 1024> spectrum;
+	static CDSPArray<float, 1024> ref_signal;
+	static CDSPArray<FFT_INTERNALS::f32_complex, 1024> transformed_signal;
+	for (size_t i = 0; i < 1024; i++)
+	{
+		ref_signal.push_back(1.f * cos(512.f * (6.283185307179586476925286f * static_cast<float>(i)) / 1024.f) + 1.f * sin((2 * 6.283185307179586476925286f * static_cast<float>(i)) / 1024.f) - 10e3f);
+	}
+	spectrum.resize(1024);
+	transformed_signal.resize(1024);
+	mf_FFT.CalculateFFT(reinterpret_cast<float*>(ref_signal.data()), spectrum.data());
+	mf_FFT.CalculateIFFT(spectrum.data(), reinterpret_cast<FFT_INTERNALS::f32_complex*>(transformed_signal.data()));
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		ASSERT_NEAR(ref_signal[i], transformed_signal[i].re, 1);
+		ASSERT_NEAR(0, transformed_signal[i].im, 1);
+	}
+
+	for (size_t i = 0; i < 512; ++i)
+	{
+		if (i == 0)
+		{
+			ASSERT_NEAR(spectrum[i].re, -1024 * 10e3, 2.5);
+			ASSERT_NEAR(spectrum[i].im, 0, 2.5);
+		}
+		else if (i == 2)
+		{
+			ASSERT_NEAR(spectrum[i].re, 0, 15e-2);
+			ASSERT_NEAR(spectrum[i].im, -512, 15e-2);
+		}
+		else if (i == 1024 - 2)
+		{
+			ASSERT_NEAR(spectrum[i].re, 0, 15e-2);
+			ASSERT_NEAR(spectrum[i].im, 512, 15e-2);
+		}
+		else if (i == 512)
+		{
+			ASSERT_NEAR(spectrum[i].re, 0, 1e-3);
+			ASSERT_NEAR(spectrum[i].im, 1024, 1e-3);
+		}
+		else
+		{
+			ASSERT_NEAR(spectrum[i].re, 0, 15e-2);
+			ASSERT_NEAR(spectrum[i].im, 0, 15e-2);
+		}
+	}
+
+#if 0	
+	std::vector<double> signal_ref;
+	std::vector<double> signal_transformed;
+	std::vector<double> signal_diff;
+	std::vector<double> signal_transformed_c;
+	std::vector<double> signal_diff_c;
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_ref.push_back(ref_signal[i]);
+	}
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_transformed.push_back(transformed_signal[i].re);
+	}
+	plot<double>(signal_ref, signal_transformed);
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_diff.push_back(signal_ref[i] - signal_transformed[i]);
+	}
+	plot<double>(signal_diff);
+
+	static CDSPArray<FFT_INTERNALS::f32_complex, 1024> ref_signal_c;
+	static CDSPArray<FFT_INTERNALS::f32_complex, 1024> ref_spectrum_c;
+	static CDSPArray<FFT_INTERNALS::f32_complex, 1024> transformedsignal_c;
+	ref_spectrum_c.resize(1024);
+	transformedsignal_c.resize(1024);
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		FFT_INTERNALS::f32_complex temp;
+		temp.re = ref_signal[i];
+		temp.im = 0;
+		ref_signal_c.push_back(temp);
+	}
+	CalculateDFT(1024, ref_signal_c.data(), ref_spectrum_c.data());
+	CalculateIDFT(1024, ref_spectrum_c.data(), transformedsignal_c.data());
+	for (const auto& i : transformedsignal_c)
+	{
+		signal_transformed_c.push_back(i.re/1024);
+	}
+	plot<double>(signal_ref, signal_transformed_c);
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_diff.push_back(signal_ref[i] - signal_transformed[i]);
+	}
+	plot<double>(signal_diff);
+#endif
+}
+
 TEST(float32_fft, complexfft_Hanning_signal)
 {
 	CFFT<10, float, float, FFT_INTERNALS::f32_complex> mf_FFT;
@@ -441,6 +642,145 @@ TEST(float64_fft, realfft_three_component_fft_2nd)
 	for (size_t i = 0; i < 1024; ++i)
 	{
 		signal_diff.push_back(signal_ref[i] - transformed_signal[i]);
+	}
+	plot<double>(signal_diff);
+#endif
+}
+
+TEST(float64_fft, realfft_impulse_response)
+{
+	CFFT<10, double, double, FFT_INTERNALS::f64_complex> m_FFT;
+
+	static CDSPArray<FFT_INTERNALS::f64_complex, 512> spectrum;
+	static CDSPArray<double, 1024> ref_signal;
+	static CDSPArray<double, 1024> transformed_signal;
+
+	for (size_t i = 0; i < 1024; i++)
+	{
+		double v = +0;
+		ref_signal.push_back(static_cast<double>(v));
+	}
+	ref_signal[0] = -32768 * 65536;
+	transformed_signal.resize(1024);
+	m_FFT.CalculateRealFFT(ref_signal.data(), spectrum.data());
+	m_FFT.CalculateRealIFFT(spectrum.data(), reinterpret_cast<FFT_INTERNALS::f64_complex*>(transformed_signal.data()));
+	//DoScaling<10>(fft_scaling, ifft_scaling, transformed_signal);
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		ASSERT_NEAR(ref_signal[i], transformed_signal[i], 1e-6);
+	}
+
+	for (size_t i = 0; i < 512; ++i)
+	{
+		ASSERT_NEAR(spectrum[i].re, -32768 * 65536, 1000);//because fft scaling is zero and the shift is in lower direction
+		if (i == 0)
+		{
+			ASSERT_NEAR(spectrum[i].re, -32768 * 65536, 1000);//because fft scaling is zero and the shift is in lower direction
+		}
+		else
+		{
+			ASSERT_NEAR(spectrum[i].im, 0, 1000);
+		}
+	}
+
+#if 0	
+	std::vector<double> signal_ref;
+	std::vector<double> signal_transformed;
+	std::vector<double> signal_diff;
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_ref.push_back(ref_signal[i]);
+	}
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_transformed.push_back(transformed_signal[i]);
+	}
+	plot<double>(signal_ref, signal_transformed);
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_diff.push_back(signal_ref[i] - signal_transformed[i]);
+	}
+	plot<double>(signal_diff);
+#endif
+}
+
+TEST(float64_fft, complexfft_impulse_response)
+{
+	CFFT<10, double, double, FFT_INTERNALS::f64_complex> mf_FFT;
+
+	static CDSPArray<FFT_INTERNALS::f64_complex, 1024> spectrum;
+	static CDSPArray<double, 1024> ref_signal;
+	static CDSPArray<FFT_INTERNALS::f64_complex, 1024> transformed_signal;
+	for (size_t i = 0; i < 1024; i++)
+	{
+		ref_signal.push_back(0);
+	}
+	ref_signal[0] = -32768 * 65536;
+	spectrum.resize(1024);
+	transformed_signal.resize(1024);
+	mf_FFT.CalculateFFT(reinterpret_cast<double*>(ref_signal.data()), spectrum.data());
+	mf_FFT.CalculateIFFT(spectrum.data(), reinterpret_cast<FFT_INTERNALS::f64_complex*>(transformed_signal.data()));
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		ASSERT_NEAR(ref_signal[i], transformed_signal[i].re, 1e-6);
+		ASSERT_NEAR(0, transformed_signal[i].im, 1e-6);
+	}
+
+	for (size_t i = 0; i < 512; ++i)
+	{
+		ASSERT_NEAR(spectrum[i].re, -32768 * 65536, 1e-6);
+		ASSERT_NEAR(spectrum[i].im, 0, 1e-6);
+	}
+
+#if 0	
+	std::vector<double> signal_ref;
+	std::vector<double> signal_transformed;
+	std::vector<double> signal_diff;
+	std::vector<double> signal_transformed_c;
+	std::vector<double> signal_diff_c;
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_ref.push_back(ref_signal[i]);
+	}
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_transformed.push_back(transformed_signal[i].re);
+	}
+	plot<double>(signal_ref, signal_transformed);
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_diff.push_back(signal_ref[i] - signal_transformed[i]);
+	}
+	plot<double>(signal_diff);
+
+	static CDSPArray<FFT_INTERNALS::f64_complex, 1024> ref_signal_c;
+	static CDSPArray<FFT_INTERNALS::f64_complex, 1024> ref_spectrum_c;
+	static CDSPArray<FFT_INTERNALS::f64_complex, 1024> transformedsignal_c;
+	ref_spectrum_c.resize(1024);
+	transformedsignal_c.resize(1024);
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		FFT_INTERNALS::f64_complex temp;
+		temp.re = ref_signal[i];
+		temp.im = 0;
+		ref_signal_c.push_back(temp);
+	}
+	CalculateDFT(1024, ref_signal_c.data(), ref_spectrum_c.data());
+	CalculateIDFT(1024, ref_spectrum_c.data(), transformedsignal_c.data());
+	for (const auto& i : transformedsignal_c)
+	{
+		signal_transformed_c.push_back(i.re / 1024);
+	}
+	plot<double>(signal_ref, signal_transformed_c);
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_diff.push_back(signal_ref[i] - signal_transformed[i]);
 	}
 	plot<double>(signal_diff);
 #endif

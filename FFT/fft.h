@@ -5,7 +5,7 @@
 #include <limits>
 
 #define _USETWIDDLE_
-#define _RECURRENCE_
+//#define _RECURRENCE_
 #define _C1x_
 
 enum class EN_ScalingMethod { SCALE_INPUT, SCALE_OUTPUT, SCALEINPOUT };
