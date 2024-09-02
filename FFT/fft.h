@@ -2,6 +2,7 @@
 #define FFT_H
 
 #include "fft_internals.h"
+#include <limits>
 
 #define _USETWIDDLE_
 #define _RECURRENCE_
@@ -16,7 +17,6 @@ enum class EN_ScalingMethod { SCALE_INPUT, SCALE_OUTPUT, SCALEINPOUT };
 
 template<size_t loglen, typename TW, typename T, typename TFFT> class CFFT {
 private:
-	CFFT();
 	TW      ma_TwiddleFactors[1 << (loglen - 1)];
 
 	void    CreateTwiddleFactors(size_t length, TW twiddlefactors[], double scaling);
@@ -66,7 +66,7 @@ private:
 	void Convert2ComplexDFT(TFFT transform[]);
 	void Convert2ComplexDFT(TFFT transform[], size_t exponent);
 public:
-	CFFT(double scaling) { CreateTwiddleFactors(sizeof(ma_TwiddleFactors) / sizeof(ma_TwiddleFactors[0]), ma_TwiddleFactors, scaling); }
+	CFFT() { CreateTwiddleFactors(sizeof(ma_TwiddleFactors) / sizeof(ma_TwiddleFactors[0]), ma_TwiddleFactors, std::numeric_limits<TW>::max()); }//other scaling factors require explitcit treatment of halflength, index 0 and length in the  Convert2HalfDFT and Convert2ComplexDFT functions
 	void CalculateFFT(T buffer[], TFFT ffttransform[]);
 	void CalculateFFT(T buffer[], TFFT ffttransform[], EN_ScalingMethod rescale, size_t* pBlockExponent);
 	void CalculateIFFT(TFFT buffer[], TFFT ffttransform[]);
