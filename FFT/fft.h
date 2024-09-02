@@ -67,8 +67,8 @@ private:
 	void Convert2ComplexDFT(TFFT transform[], size_t exponent);
 public:
 	CFFT() { CreateTwiddleFactors(sizeof(ma_TwiddleFactors) / sizeof(ma_TwiddleFactors[0]), ma_TwiddleFactors, std::numeric_limits<TW>::max()); }//other scaling factors require explitcit treatment of halflength, index 0 and length in the  Convert2HalfDFT and Convert2ComplexDFT functions
-	void CalculateFFT(T buffer[], TFFT ffttransform[]);
-	void CalculateFFT(T buffer[], TFFT ffttransform[], EN_ScalingMethod rescale, size_t* pBlockExponent);
+	template <typename TSRC> void CalculateFFT(TSRC buffer[], TFFT ffttransform[]);
+	template <typename TSRC> void CalculateFFT(TSRC buffer[], TFFT ffttransform[], EN_ScalingMethod rescale, size_t* pBlockExponent);
 	void CalculateIFFT(TFFT buffer[], TFFT ffttransform[]);
 	void CalculateIFFT(TFFT buffer[], TFFT ffttransform[], EN_ScalingMethod rescale, size_t* pBlockExponent);
 	void CalculateRealFFT(T buffer[], TFFT ffttransform[]);
@@ -169,7 +169,8 @@ TW CFFT<loglen, TW, T, TFFT>::GetSinFactor(size_t stage, size_t stageshift)
 }
 
 template <size_t loglen, typename TW, typename T, typename TFFT>
-void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[])
+template <typename TSRC>
+void CFFT<loglen, TW, T, TFFT>::CalculateFFT(TSRC buffer[], TFFT ffttransform[])
 {
 	static const size_t bitcorrection = sizeof(reinterpret_cast<TFFT*>(0)->re) * 8 - 1;
 	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
@@ -267,7 +268,8 @@ void CFFT<loglen, TW, T, TFFT>::CalculateIFFT(TFFT buffer[], TFFT ffttransform[]
 }
 
 template <size_t loglen, typename TW, typename T, typename TFFT>
-void CFFT<loglen, TW, T, TFFT>::CalculateFFT(T buffer[], TFFT ffttransform[], EN_ScalingMethod rescale, size_t* pBlockExponent)
+template <typename TSRC>
+void CFFT<loglen, TW, T, TFFT>::CalculateFFT(TSRC buffer[], TFFT ffttransform[], EN_ScalingMethod rescale, size_t* pBlockExponent)
 {
 	static const size_t bitcorrection = sizeof(reinterpret_cast<TFFT*>(0)->re) * 8 - 1;
 	static const size_t wscaling_real = (sizeof(reinterpret_cast<TFFT*>(0)->re) - sizeof(TW)) * 8;
@@ -1157,7 +1159,7 @@ public:
 #else
 	CFFT() {};
 #endif
-	void CalculateFFT(float buffer[], FFT_INTERNALS::f32_complex ffttransform[]);
+	template <typename TSRC> void CalculateFFT(TSRC buffer[], FFT_INTERNALS::f32_complex ffttransform[]);
 	void CalculateIFFT(FFT_INTERNALS::f32_complex buffer[], FFT_INTERNALS::f32_complex ffttransform[]);
 	void CalculateRealFFT(float buffer[], FFT_INTERNALS::f32_complex ffttransform[]);
 	void CalculateRealIFFT(FFT_INTERNALS::f32_complex buffer[], FFT_INTERNALS::f32_complex ffttransform[]);
@@ -1260,7 +1262,8 @@ float CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::GetSinFactor(size_
 #endif
 
 template <size_t loglen>
-void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::CalculateFFT(float buffer[], FFT_INTERNALS::f32_complex ffttransform[])
+template <typename TSRC>
+void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::CalculateFFT(TSRC buffer[], FFT_INTERNALS::f32_complex ffttransform[])
 {
 	static const float PI2 = 6.2831853071795864769252868f;
 	static const size_t ldlen = loglen;
@@ -1754,7 +1757,7 @@ public:
 #else
 	CFFT() {};
 #endif
-	void CalculateFFT(double buffer[], FFT_INTERNALS::f64_complex ffttransform[]);
+	template <typename TSRC> void CalculateFFT(TSRC buffer[], FFT_INTERNALS::f64_complex ffttransform[]);
 	void CalculateIFFT(FFT_INTERNALS::f64_complex buffer[], FFT_INTERNALS::f64_complex ffttransform[]);
 	void CalculateRealFFT(double buffer[], FFT_INTERNALS::f64_complex ffttransform[]);
 	void CalculateRealIFFT(FFT_INTERNALS::f64_complex buffer[], FFT_INTERNALS::f64_complex ffttransform[]);
@@ -1857,7 +1860,8 @@ double CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::GetSinFactor(si
 #endif
 
 template <size_t loglen>
-void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::CalculateFFT(double buffer[], FFT_INTERNALS::f64_complex ffttransform[])
+template <typename TSRC>
+void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::CalculateFFT(TSRC buffer[], FFT_INTERNALS::f64_complex ffttransform[])
 {
 	static const double PI2 = 6.2831853071795864769252868;
 	static const size_t ldlen = loglen;

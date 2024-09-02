@@ -1646,7 +1646,7 @@ TEST(int32_fft, complexfft_three_components)
 	m_FFT.CalculateIFFT(spectrum.data(), reinterpret_cast<FFT_INTERNALS::i32_complex*>(transformed_signal.data()));
 	for (size_t i = 0; i < 1024; ++i)
 	{
-		ASSERT_NEAR(ref_signal[i], transformed_signal[i].re, 2048);
+		ASSERT_NEAR(ref_signal[i], transformed_signal[i].re, 1024);
 	}
 
 	for (size_t i = 0; i < 1024; ++i)
@@ -1690,6 +1690,82 @@ TEST(int32_fft, complexfft_three_components)
 	{
 		signal_transformed.push_back(transformed_signal[i].re);
 }
+	plot<double>(signal_ref, signal_transformed);
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_diff.push_back(signal_ref[i] - signal_transformed[i]);
+	}
+	plot<double>(signal_diff);
+#endif
+}
+
+TEST(fft, typecheck)
+{
+	CFFT<10, int, int, FFT_INTERNALS::i32_complex> m_FFT;
+
+	static CDSPArray<FFT_INTERNALS::i32_complex, 1024> spectrum;
+	static CDSPArray<FFT_INTERNALS::i32_complex, 1024> ref_signal;
+	static CDSPArray<FFT_INTERNALS::i32_complex, 1024> transformed_signal;
+	for (size_t i = 0; i < 1024; i++)
+	{
+		const double v = 65536 * 2048 * cos(512. * (6.283185307179586476925286 * static_cast<double>(i)) / 1024.) + 65536 * 4096. * sin((2 * 6.283185307179586476925286 * static_cast<double>(i)) / 1024.) - 65536 * 10;
+		FFT_INTERNALS::i32_complex vv;
+		vv.re = static_cast<int>(v);
+		vv.im = static_cast<int>(0);
+		ref_signal.push_back(vv);
+	}
+	spectrum.resize(1024);
+	transformed_signal = ref_signal;
+	m_FFT.CalculateFFT(transformed_signal.data(), spectrum.data());
+	m_FFT.CalculateIFFT(spectrum.data(), reinterpret_cast<FFT_INTERNALS::i32_complex*>(transformed_signal.data()));
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		ASSERT_NEAR(ref_signal[i].re, transformed_signal[i].re, 1024);
+		ASSERT_NEAR(ref_signal[i].im, transformed_signal[i].im, 1024);
+	}
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		if (i == 512)
+		{
+			ASSERT_NEAR(spectrum[i].re, 65536 * 2048, 512);
+			ASSERT_NEAR(spectrum[i].im, 0, 10);
+		}
+		else if (i == 2)
+		{
+			ASSERT_NEAR(spectrum[i].re, 0, 512);
+			ASSERT_NEAR(spectrum[i].im, -65536 * 4096 / 2, 10);
+		}
+		else if (i == 1024 - 2)
+		{
+			ASSERT_NEAR(spectrum[i].re, 0, 512);
+			ASSERT_NEAR(spectrum[i].im, 65536 * 4096 / 2, 10);
+		}
+		else if (i == 0)
+		{
+			ASSERT_NEAR(spectrum[i].re, -65536 * 10, 10);
+			ASSERT_NEAR(spectrum[i].im, 0, 512);
+		}
+		else
+		{
+			ASSERT_NEAR(spectrum[i].re, 0, 10);
+			ASSERT_NEAR(spectrum[i].im, 0, 10);
+		}
+	}
+#if 0	
+	std::vector<double> signal_ref;
+	std::vector<double> signal_transformed;
+	std::vector<double> signal_diff;
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_ref.push_back(ref_signal[i].re);
+	}
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_transformed.push_back(transformed_signal[i].re);
+	}
 	plot<double>(signal_ref, signal_transformed);
 
 	for (size_t i = 0; i < 1024; ++i)
