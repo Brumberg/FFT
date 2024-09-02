@@ -14,11 +14,17 @@
 #include "gmock/gmock.h"
 
 using sint32 = int;
-
 #include "DSPArray.h"
+#ifdef NDEBUG
+#define SPEEDTEST_LOOPLENGTH 100000
+#else
+#define SPEEDTEST_LOOPLENGTH 10000
+#endif
 #endif
 
+
 #ifdef _GTEST_
+
 template <typename CType>
 void CalculateDFT(size_t length, CType* buffer, CType* result)
 {
@@ -1765,6 +1771,263 @@ TEST(fft, typecheck)
 	for (size_t i = 0; i < 1024; ++i)
 	{
 		signal_transformed.push_back(transformed_signal[i].re);
+	}
+	plot<double>(signal_ref, signal_transformed);
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_diff.push_back(signal_ref[i] - signal_transformed[i]);
+	}
+	plot<double>(signal_diff);
+#endif
+}
+
+TEST(fft, speedcheck_int16)
+{
+	CFFT<10, short, short, FFT_INTERNALS::i16_complex> m_FFT;
+
+	static CDSPArray<FFT_INTERNALS::i16_complex, 512> spectrum;
+	static CDSPArray<short, 1024> ref_signal;
+	static CDSPArray<short, 1024> transformed_signal;
+
+	for (size_t i = 0; i < 1024; i++)
+	{
+		double v = +0;
+		ref_signal.push_back(static_cast<short>(v));
+	}
+	ref_signal[0] = -32768;
+	transformed_signal.resize(1024);
+	size_t fft_scaling;
+	size_t ifft_scaling;
+	for (size_t i = 0; i < SPEEDTEST_LOOPLENGTH; ++i)
+	{
+		m_FFT.CalculateRealFFT(ref_signal.data(), spectrum.data(), EN_ScalingMethod::SCALEINPOUT, &fft_scaling);
+		m_FFT.CalculateRealIFFT(spectrum.data(), reinterpret_cast<FFT_INTERNALS::i16_complex*>(transformed_signal.data()), EN_ScalingMethod::SCALEINPOUT, &ifft_scaling);
+	}
+	DoScaling<10>(fft_scaling, ifft_scaling, transformed_signal);
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		ASSERT_NEAR(ref_signal[i], transformed_signal[i], 20);
+	}
+
+	for (size_t i = 0; i < 512; ++i)
+	{
+		ASSERT_NEAR(spectrum[i].re, -32768 >> (fft_scaling), 40);//because fft scaling is zero and the shift is in lower direction
+		if (i == 0)
+		{
+			ASSERT_NEAR(spectrum[i].re, -32768 >> (fft_scaling), 40);//because fft scaling is zero and the shift is in lower direction
+		}
+		else
+		{
+			ASSERT_NEAR(spectrum[i].im, 0, 40);
+		}
+	}
+
+#if 0	
+	std::vector<double> signal_ref;
+	std::vector<double> signal_transformed;
+	std::vector<double> signal_diff;
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_ref.push_back(ref_signal[i]);
+	}
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_transformed.push_back(transformed_signal[i]);
+	}
+	plot<double>(signal_ref, signal_transformed);
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_diff.push_back(signal_ref[i] - signal_transformed[i]);
+	}
+	plot<double>(signal_diff);
+#endif
+}
+
+TEST(fft, speedcheck_int32)
+{
+	CFFT<10, int, int, FFT_INTERNALS::i32_complex> m_FFT;
+
+	static CDSPArray<FFT_INTERNALS::i32_complex, 512> spectrum;
+	static CDSPArray<int, 1024> ref_signal;
+	static CDSPArray<int, 1024> transformed_signal;
+
+	for (size_t i = 0; i < 1024; i++)
+	{
+		double v = +0;
+		ref_signal.push_back(static_cast<int>(v));
+	}
+	ref_signal[0] = -32767 * 65536;
+	transformed_signal.resize(1024);
+	size_t fft_scaling;
+	size_t ifft_scaling;
+	for (size_t i = 0; i < SPEEDTEST_LOOPLENGTH; ++i)
+	{
+		m_FFT.CalculateRealFFT(ref_signal.data(), spectrum.data(), EN_ScalingMethod::SCALEINPOUT, &fft_scaling);
+		//spectrum[0].im *= -1;
+		m_FFT.CalculateRealIFFT(spectrum.data(), reinterpret_cast<FFT_INTERNALS::i32_complex*>(transformed_signal.data()), EN_ScalingMethod::SCALEINPOUT, &ifft_scaling);
+	}
+	DoScaling<10>(fft_scaling, ifft_scaling, transformed_signal);
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		ASSERT_NEAR(ref_signal[i], transformed_signal[i], 10);
+	}
+
+	for (size_t i = 0; i < 512; ++i)
+	{
+		ASSERT_NEAR(spectrum[i].re, -32767 * 65536 >> (fft_scaling), 10);//because fft scaling is zero and the shift is in lower direction
+		if (i == 0)
+		{
+			ASSERT_NEAR(spectrum[i].re, -32767 * 65536 >> (fft_scaling), 10);//because fft scaling is zero and the shift is in lower direction
+		}
+		else
+		{
+			ASSERT_NEAR(spectrum[i].im, 0, 10);
+		}
+	}
+
+#if 0	
+	std::vector<double> signal_ref;
+	std::vector<double> signal_transformed;
+	std::vector<double> signal_diff;
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_ref.push_back(ref_signal[i]);
+	}
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_transformed.push_back(transformed_signal[i]);
+	}
+	plot<double>(signal_ref, signal_transformed);
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_diff.push_back(signal_ref[i] - signal_transformed[i]);
+	}
+	plot<double>(signal_diff);
+#endif
+}
+
+TEST(fft, speedcheck_float32)
+{
+	CFFT<10, float, float, FFT_INTERNALS::f32_complex> m_FFT;
+
+	static CDSPArray<FFT_INTERNALS::f32_complex, 512> spectrum;
+	static CDSPArray<float, 1024> ref_signal;
+	static CDSPArray<float, 1024> transformed_signal;
+
+	for (size_t i = 0; i < 1024; i++)
+	{
+		double v = +0;
+		ref_signal.push_back(static_cast<float>(v));
+	}
+	ref_signal[0] = -32768 * 65536;
+	transformed_signal.resize(1024);
+	for (size_t i = 0; i < SPEEDTEST_LOOPLENGTH; ++i)
+	{
+		m_FFT.CalculateRealFFT(ref_signal.data(), spectrum.data());
+		m_FFT.CalculateRealIFFT(spectrum.data(), reinterpret_cast<FFT_INTERNALS::f32_complex*>(transformed_signal.data()));
+	}
+	//DoScaling<10>(fft_scaling, ifft_scaling, transformed_signal);
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		ASSERT_NEAR(ref_signal[i], transformed_signal[i], 500);
+	}
+
+	for (size_t i = 0; i < 512; ++i)
+	{
+		ASSERT_NEAR(spectrum[i].re, -32768 * 65536, 1000);//because fft scaling is zero and the shift is in lower direction
+		if (i == 0)
+		{
+			ASSERT_NEAR(spectrum[i].re, -32768 * 65536, 1000);//because fft scaling is zero and the shift is in lower direction
+		}
+		else
+		{
+			ASSERT_NEAR(spectrum[i].im, 0, 1000);
+		}
+	}
+
+#if 0	
+	std::vector<double> signal_ref;
+	std::vector<double> signal_transformed;
+	std::vector<double> signal_diff;
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_ref.push_back(ref_signal[i]);
+	}
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_transformed.push_back(transformed_signal[i]);
+	}
+	plot<double>(signal_ref, signal_transformed);
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_diff.push_back(signal_ref[i] - signal_transformed[i]);
+	}
+	plot<double>(signal_diff);
+#endif
+}
+
+TEST(fft, speedcheck_float64)
+{
+	CFFT<10, double, double, FFT_INTERNALS::f64_complex> m_FFT;
+
+	static CDSPArray<FFT_INTERNALS::f64_complex, 512> spectrum;
+	static CDSPArray<double, 1024> ref_signal;
+	static CDSPArray<double, 1024> transformed_signal;
+
+	for (size_t i = 0; i < 1024; i++)
+	{
+		double v = +0;
+		ref_signal.push_back(static_cast<double>(v));
+	}
+	ref_signal[0] = -32768 * 65536;
+	transformed_signal.resize(1024);
+	for (size_t i = 0; i < SPEEDTEST_LOOPLENGTH; ++i)
+	{
+		m_FFT.CalculateRealFFT(ref_signal.data(), spectrum.data());
+		m_FFT.CalculateRealIFFT(spectrum.data(), reinterpret_cast<FFT_INTERNALS::f64_complex*>(transformed_signal.data()));
+	}
+	//DoScaling<10>(fft_scaling, ifft_scaling, transformed_signal);
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		ASSERT_NEAR(ref_signal[i], transformed_signal[i], 1e-6);
+	}
+
+	for (size_t i = 0; i < 512; ++i)
+	{
+		ASSERT_NEAR(spectrum[i].re, -32768 * 65536, 1000);//because fft scaling is zero and the shift is in lower direction
+		if (i == 0)
+		{
+			ASSERT_NEAR(spectrum[i].re, -32768 * 65536, 1000);//because fft scaling is zero and the shift is in lower direction
+		}
+		else
+		{
+			ASSERT_NEAR(spectrum[i].im, 0, 1000);
+		}
+	}
+
+#if 0	
+	std::vector<double> signal_ref;
+	std::vector<double> signal_transformed;
+	std::vector<double> signal_diff;
+
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_ref.push_back(ref_signal[i]);
+	}
+	for (size_t i = 0; i < 1024; ++i)
+	{
+		signal_transformed.push_back(transformed_signal[i]);
 	}
 	plot<double>(signal_ref, signal_transformed);
 

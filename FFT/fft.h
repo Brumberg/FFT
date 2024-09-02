@@ -10,6 +10,7 @@
 #define _C1x_
 
 enum class EN_ScalingMethod { SCALE_INPUT, SCALE_OUTPUT, SCALEINPOUT };
+enum class EN_NormalizationMethod {FORWARD, BACKWARD, NONE};
 
 /**
 * fixed point implementation of the FFT algorithm.
@@ -1106,6 +1107,7 @@ void CFFT<loglen, TW, T, TFFT>::Convert2HalfDFT(TFFT transform[], size_t exponen
 
 template<size_t loglen> class CFFT<loglen, float, float, FFT_INTERNALS::f32_complex> {
 private:
+	constexpr static EN_NormalizationMethod NORMALIZE = EN_NormalizationMethod::BACKWARD;
 #ifdef _USETWIDDLE_
 	float	ma_TwiddleFactors[1 << (loglen - 1)];
 
@@ -1327,6 +1329,15 @@ void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::CalculateFFT(TSRC b
 			}
 		}
 	}
+	if constexpr (NORMALIZE == EN_NormalizationMethod::FORWARD)
+	{
+		const float scaling = 1.0f / length;
+		for (size_t i = 0; i < length; i++)
+		{
+			ffttransform[i].re *= scaling;
+			ffttransform[i].im *= scaling;
+		}
+	}
 }
 
 template <size_t loglen>
@@ -1394,11 +1405,14 @@ void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::CalculateIFFT(FFT_I
 		}
 	}
 
-	const float scaling = 1.0f / length;
-	for (size_t i = 0; i < length; i++)
+	if constexpr (NORMALIZE == EN_NormalizationMethod::BACKWARD)
 	{
-		ffttransform[i].re *= scaling;
-		ffttransform[i].im *= scaling;
+		const float scaling = 1.0f / length;
+		for (size_t i = 0; i < length; i++)
+		{
+			ffttransform[i].re *= scaling;
+			ffttransform[i].im *= scaling;
+		}
 	}
 }
 
@@ -1447,6 +1461,16 @@ void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::CalculateRealFFT(fl
 		}
 	}
 	Convert2HalfDFT(ffttransform);
+
+	if constexpr (NORMALIZE == EN_NormalizationMethod::FORWARD)
+	{
+		const float scaling = 1.0f / length;
+		for (size_t i = 0; i < length; i++)
+		{
+			ffttransform[i].re *= scaling;
+			ffttransform[i].im *= scaling;
+		}
+	}
 }
 
 template <size_t loglen>
@@ -1516,11 +1540,14 @@ void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::CalculateRealIFFT(F
 		}
 	}
 
-	const float scaling = 1.0f / length;
-	for (size_t i = 0; i < length; i++)
+	if constexpr (NORMALIZE == EN_NormalizationMethod::BACKWARD)
 	{
-		ffttransform[i].re *= scaling;
-		ffttransform[i].im *= scaling;
+		const float scaling = 1.0f / length;
+		for (size_t i = 0; i < length; i++)
+		{
+			ffttransform[i].re *= scaling;
+			ffttransform[i].im *= scaling;
+		}
 	}
 }
 
@@ -1702,6 +1729,7 @@ void CFFT<loglen, float, float, FFT_INTERNALS::f32_complex>::Convert2ComplexDFT(
 
 template<size_t loglen> class CFFT<loglen, double, double, FFT_INTERNALS::f64_complex> {
 private:
+	static constexpr EN_NormalizationMethod NORMALIZE = EN_NormalizationMethod::BACKWARD;
 #ifdef _USETWIDDLE_
 	double	ma_TwiddleFactors[1 << (loglen - 1)];
 
@@ -1924,6 +1952,15 @@ void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::CalculateFFT(TSRC
 			}
 		}
 	}
+	if constexpr (NORMALIZE == EN_NormalizationMethod::FORWARD)
+	{
+		const double scaling = 1.0 / length;
+		for (size_t i = 0; i < length; i++)
+		{
+			ffttransform[i].re *= scaling;
+			ffttransform[i].im *= scaling;
+		}
+	}
 }
 
 template <size_t loglen>
@@ -1988,12 +2025,14 @@ void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::CalculateIFFT(FFT
 			}
 		}
 	}
-
-	const double scaling = 1.0 / length;
-	for (size_t i = 0; i < length; i++)
+	if constexpr(NORMALIZE == EN_NormalizationMethod::BACKWARD)
 	{
-		ffttransform[i].re *= scaling;
-		ffttransform[i].im *= scaling;
+		const double scaling = 1.0 / length;
+		for (size_t i = 0; i < length; i++)
+		{
+			ffttransform[i].re *= scaling;
+			ffttransform[i].im *= scaling;
+		}
 	}
 }
 
@@ -2062,11 +2101,14 @@ void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::CalculateRealIFFT
 		}
 	}
 
-	const double scaling = 1.0 / length;
-	for (size_t i = 0; i < length; i++)
+	if constexpr (NORMALIZE == EN_NormalizationMethod::BACKWARD)
 	{
-		ffttransform[i].re *= scaling;
-		ffttransform[i].im *= scaling;
+		const double scaling = 1.0 / length;
+		for (size_t i = 0; i < length; i++)
+		{
+			ffttransform[i].re *= scaling;
+			ffttransform[i].im *= scaling;
+		}
 	}
 }
 
@@ -2114,6 +2156,16 @@ void CFFT<loglen, double, double, FFT_INTERNALS::f64_complex>::CalculateRealFFT(
 		}
 	}
 	Convert2HalfDFT(ffttransform);
+
+	if constexpr (NORMALIZE == EN_NormalizationMethod::FORWARD)
+	{
+		const double scaling = 1.0 / length;
+		for (size_t i = 0; i < length; i++)
+		{
+			ffttransform[i].re *= scaling;
+			ffttransform[i].im *= scaling;
+		}
+	}
 }
 
 #ifdef _DEBUG_RFFT_
