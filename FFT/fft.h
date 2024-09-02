@@ -3,6 +3,7 @@
 
 #include "fft_internals.h"
 #include <limits>
+#include <type_traits>
 
 #define _USETWIDDLE_
 //#define _RECURRENCE_
@@ -66,7 +67,7 @@ private:
 	void Convert2ComplexDFT(TFFT transform[]);
 	void Convert2ComplexDFT(TFFT transform[], size_t exponent);
 public:
-	CFFT() { CreateTwiddleFactors(sizeof(ma_TwiddleFactors) / sizeof(ma_TwiddleFactors[0]), ma_TwiddleFactors, std::numeric_limits<TW>::max()); }//other scaling factors require explitcit treatment of halflength, index 0 and length in the  Convert2HalfDFT and Convert2ComplexDFT functions
+	CFFT() { static_assert(std::is_same<T, TFFT::DATATYPE>(), "Incompatible type definitions"); CreateTwiddleFactors(sizeof(ma_TwiddleFactors) / sizeof(ma_TwiddleFactors[0]), ma_TwiddleFactors, std::numeric_limits<TW>::max()); }//other scaling factors require explitcit treatment of halflength, index 0 and length in the  Convert2HalfDFT and Convert2ComplexDFT functions
 	template <typename TSRC> void CalculateFFT(TSRC buffer[], TFFT ffttransform[]);
 	template <typename TSRC> void CalculateFFT(TSRC buffer[], TFFT ffttransform[], EN_ScalingMethod rescale, size_t* pBlockExponent);
 	void CalculateIFFT(TFFT buffer[], TFFT ffttransform[]);
@@ -1155,7 +1156,7 @@ private:
 	void Convert2ComplexDFT(FFT_INTERNALS::f32_complex transform[]);
 public:
 #ifdef _USETWIDDLE_
-	CFFT() { CreateTwiddleFactors(sizeof(ma_TwiddleFactors) / sizeof(ma_TwiddleFactors[0]), ma_TwiddleFactors); }
+	CFFT() { static_assert(std::is_same<float, FFT_INTERNALS::f32_complex::DATATYPE>(), "Incompatible type definitions"); CreateTwiddleFactors(sizeof(ma_TwiddleFactors) / sizeof(ma_TwiddleFactors[0]), ma_TwiddleFactors); }
 #else
 	CFFT() {};
 #endif
@@ -1753,7 +1754,7 @@ public:
 	void Convert2HalfDFT(FFT_INTERNALS::f64_complex ffttransform[], FFT_INTERNALS::f64_complex result[]);
 #endif
 #ifdef _USETWIDDLE_
-	CFFT() { CreateTwiddleFactors(sizeof(ma_TwiddleFactors) / sizeof(ma_TwiddleFactors[0]), ma_TwiddleFactors); }
+	CFFT() { static_assert(std::is_same<double, FFT_INTERNALS::f64_complex::DATATYPE>(), "Incompatible type definitions"); CreateTwiddleFactors(sizeof(ma_TwiddleFactors) / sizeof(ma_TwiddleFactors[0]), ma_TwiddleFactors); }
 #else
 	CFFT() {};
 #endif
